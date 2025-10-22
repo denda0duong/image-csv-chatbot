@@ -11,6 +11,7 @@ from src.models.constants import MessageRole
 from src.services.chat_history import ChatHistoryManager
 from src.services.gemini_service import GeminiChatService
 from src.services.response_handler import ResponseHandler
+from src.services.csv_service import CSVService
 from src.ui.chat import ChatUI
 from src.ui.sidebar import SidebarUI
 from logger_config import LoggerConfig, get_logger
@@ -72,6 +73,7 @@ class ChatbotApp:
         2. Display the message with timestamp
         3. Generate and display AI response
         4. Handle optional image input
+        5. Handle optional CSV data
         """
         if prompt := ChatUI.get_user_input():
             logger.info(f"User submitted message (length: {len(prompt)} chars)")
@@ -81,7 +83,34 @@ class ChatbotApp:
             if uploaded_image:
                 logger.info("User message includes an image")
             
-            # Store user message with timestamp
+            # Check if there's a loaded CSV DataFrame
+            df = st.session_state.get('df', None)
+            if df is not None:
+                logger.info(f"User message includes CSV data: {df.shape[0]} rows, {df.shape[1]} columns")
+            
+            # Prepare the enhanced prompt with CSV context if available
+            enhanced_prompt = prompt
+            if df is not None:
+                # Generate CSV context using CSVService
+                csv_context = CSVService.generate_context_for_ai(df)
+                # Create augmented prompt with data analyst role
+                enhanced_prompt = f"""{csv_context}
+
+IMPORTANT INSTRUCTIONS:
+- You have access to the COMPLETE dataset above (all {df.shape[0]:,} rows and {df.shape[1]} columns)
+- Analyze the actual data, not just the schema
+- Give direct, specific answers with exact numbers, column names, and values
+- If asked about missing values, check the "Missing Values" section above
+- If no missing values are listed, state "No missing values found in the dataset"
+- Provide concrete examples from the actual data when relevant
+- Be concise and factual
+
+User's question: {prompt}"""
+                logger.info(f"Enhanced prompt with CSV context (total length: {len(enhanced_prompt)} chars, context: {len(csv_context)} chars)")
+            else:
+                logger.debug("No CSV data to include in prompt")
+            
+            # Store user message with timestamp (original prompt, not enhanced)
             self.history_manager.add_message(MessageRole.USER.value, prompt)
             
             # Get the last message (just added) to display with timestamp
@@ -100,9 +129,14 @@ class ChatbotApp:
                 if uploaded_image:
                     with st.chat_message(MessageRole.USER.value):
                         st.image(uploaded_image, caption="Uploaded Image", width="stretch")
+                
+                # If there's CSV data, show indicator in chat
+                if df is not None:
+                    with st.chat_message(MessageRole.USER.value):
+                        st.caption(f"📊 Using loaded CSV: {df.shape[0]:,} rows × {df.shape[1]} columns")
             
-            # Generate and display AI response (with image if present)
-            self.response_handler.handle_response(prompt, image=uploaded_image)
+            # Generate and display AI response (with enhanced prompt and image if present)
+            self.response_handler.handle_response(enhanced_prompt, image=uploaded_image)
             
             # Clear the image from session state after processing
             if uploaded_image and 'uploaded_image' in st.session_state:
