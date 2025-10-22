@@ -5,6 +5,9 @@ Chat history management service.
 import streamlit as st
 from typing import List, Dict
 from ..models.message import ChatMessage
+from logger_config import get_logger
+
+logger = get_logger(__name__)
 
 
 class ChatHistoryManager:
@@ -17,6 +20,7 @@ class ChatHistoryManager:
         """Initialize chat history in session state if it doesn't exist."""
         if ChatHistoryManager.SESSION_KEY not in st.session_state:
             st.session_state[ChatHistoryManager.SESSION_KEY] = []
+            logger.info("Chat history initialized")
     
     @staticmethod
     def get_messages() -> List[Dict[str, str]]:
@@ -26,7 +30,9 @@ class ChatHistoryManager:
         Returns:
             List of message dictionaries with 'role' and 'content' keys
         """
-        return st.session_state.get(ChatHistoryManager.SESSION_KEY, [])
+        messages = st.session_state.get(ChatHistoryManager.SESSION_KEY, [])
+        logger.debug(f"Retrieved {len(messages)} messages from history")
+        return messages
     
     @staticmethod
     def add_message(role: str, content: str) -> None:
@@ -39,11 +45,14 @@ class ChatHistoryManager:
         """
         message = ChatMessage(role=role, content=content)
         st.session_state[ChatHistoryManager.SESSION_KEY].append(message.to_dict())
+        logger.info(f"Added {role} message to history (length: {len(content)} chars)")
     
     @staticmethod
     def clear() -> None:
         """Clear all messages from the chat history."""
+        message_count = len(st.session_state.get(ChatHistoryManager.SESSION_KEY, []))
         st.session_state[ChatHistoryManager.SESSION_KEY] = []
+        logger.info(f"Cleared chat history ({message_count} messages removed)")
     
     @staticmethod
     def get_message_count() -> int:

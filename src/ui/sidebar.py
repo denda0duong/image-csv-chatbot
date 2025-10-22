@@ -29,6 +29,16 @@ class SidebarUI:
         """Render the settings section."""
         st.header("⚙️ Settings")
         
+        # Show timestamps toggle
+        if "show_timestamps" not in st.session_state:
+            st.session_state.show_timestamps = True
+        
+        st.session_state.show_timestamps = st.toggle(
+            "🕐 Show Timestamps",
+            value=st.session_state.show_timestamps,
+            help="Display when each message was sent"
+        )
+        
         # Clear chat button
         if st.button("🗑️ Clear Chat History", use_container_width=True):
             ChatHistoryManager.clear()

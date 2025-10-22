@@ -6,6 +6,7 @@
 image-csv-chatbot/
 ├── app.py                      # Main application entry point
 ├── config.py                   # Configuration and API setup
+├── logger_config.py            # Logging system configuration
 ├── requirements.txt            # Python dependencies
 ├── .env                        # Environment variables (not in repo)
 ├── .env.example               # Template for environment variables
@@ -26,7 +27,11 @@ image-csv-chatbot/
 │       ├── chat.py            # Chat UI components
 │       └── sidebar.py         # Sidebar UI components
 │
-└── README.md                  # Main documentation
+├── logs/                       # Application logs (auto-generated)
+│   └── chatbot_*.log          # Daily log files
+│
+├── README.md                  # Main documentation
+├── ARCHITECTURE.md            # This file
 ```
 
 ## 🏗️ Architecture Principles
@@ -88,6 +93,15 @@ The project follows clean architecture principles with clear separation of conce
 **message.py**
 - `ChatMessage`: Chat message data structure
 - `GeminiMessage`: Gemini API format message
+- Auto-generates timestamps when messages are created
+
+### Core Infrastructure
+
+**logger_config.py**
+- `LoggerConfig`: Centralized logging configuration
+- `setup_logging()`: Configures file and console handlers
+- Daily log files in `logs/` directory
+- Privacy-focused logging (metadata only)
 
 ### Services (`src/services/`)
 
@@ -95,28 +109,33 @@ The project follows clean architecture principles with clear separation of conce
 - `ChatHistoryManager`: Manages chat state
 - Methods for CRUD operations on history
 - Session state abstraction
+- Comprehensive logging of all operations
 
 **gemini_service.py**
 - `GeminiChatService`: Gemini API wrapper
 - Streaming and non-streaming responses
 - Format conversion
+- Detailed logging with error tracking and performance metrics
 
 **response_handler.py**
 - `ResponseHandler`: Orchestrates response generation
-- Error handling
+- Error handling with logging
 - Status updates
+- Request/response lifecycle tracking
 
 ### UI (`src/ui/`)
 
 **chat.py**
 - `ChatUI`: Chat interface components
-- Message rendering
+- Message rendering with optional timestamps
 - Input handling
+- Conditional timestamp display based on user preference
 
 **sidebar.py**
 - `SidebarUI`: Sidebar components
 - Settings
 - Information sections
+- User preference management
 
 ## 🚀 Adding New Features
 
@@ -192,17 +211,31 @@ class UploadedFile:
 - Test UI interactions
 - Test performance with large histories
 
-## 📊 Future Enhancements
+## 📊 Recent Enhancements
+
+### Implemented Features
+- ✅ **Message Timestamps**: Track when messages are sent/replied
+  - Optional display with sidebar toggle
+  - Persistent timestamp storage
+  - See [TIMESTAMP_FEATURE.md](TIMESTAMP_FEATURE.md)
+
+- ✅ **Comprehensive Logging**: Enterprise-grade logging system
+  - Daily log files in `logs/` directory
+  - File and console handlers
+  - Privacy-focused (metadata only)
+  - See [LOGGING.md](LOGGING.md)
+
+### Future Enhancements
 
 Ready for:
-- ✅ CSV file upload and analysis
-- ✅ Image upload and vision analysis
-- ✅ Multiple chat sessions
-- ✅ Export chat history
-- ✅ Custom system prompts
-- ✅ Response templates
-- ✅ User preferences
-- ✅ Analytics dashboard
+- CSV file upload and analysis
+- Image upload and vision analysis
+- Multiple chat sessions
+- Export chat history
+- Custom system prompts
+- Response templates
+- User preferences
+- Analytics dashboard
 
 ## 🔒 Security Considerations
 

@@ -33,9 +33,14 @@ class ChatUI:
         Args:
             messages: List of message dictionaries to display
         """
+        show_timestamps = st.session_state.get("show_timestamps", True)
+        
         for message in messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
+                # Display timestamp if available and enabled
+                if show_timestamps and "timestamp" in message and message["timestamp"]:
+                    st.caption(f"🕐 {message['timestamp']}")
     
     @staticmethod
     def get_user_input() -> str:
@@ -48,16 +53,21 @@ class ChatUI:
         return st.chat_input(AppConfig.DEFAULT_PROMPT)
     
     @staticmethod
-    def display_message(role: str, content: str) -> None:
+    def display_message(role: str, content: str, timestamp: str = None) -> None:
         """
-        Display a single message.
+        Display a single message with optional timestamp.
         
         Args:
             role: The role of the message sender
             content: The content to display
+            timestamp: Optional timestamp to display
         """
+        show_timestamps = st.session_state.get("show_timestamps", True)
+        
         with st.chat_message(role):
             st.markdown(content)
+            if show_timestamps and timestamp:
+                st.caption(f"🕐 {timestamp}")
     
     @staticmethod
     def display_streaming_response(response_generator) -> str:

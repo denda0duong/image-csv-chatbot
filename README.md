@@ -7,6 +7,8 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
 - 🤖 Chat with Google Gemini AI (vision and text models)
 - 📊 Upload and analyze CSV files with Pandas
 - 🖼️ Upload and analyze images with AI vision capabilities
+- ⏱️ **Message timestamps** - Track when messages are sent and replied
+- 📋 **Comprehensive logging** - Monitor app activity, debug issues, track performance
 - 🔒 Secure API key management using environment variables
 - ⚡ Built with Streamlit for fast, interactive UI
 
@@ -16,6 +18,7 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
 image-csv-chatbot/
 ├── app.py                  # Main application entry point
 ├── config.py               # Configuration and API initialization
+├── logger_config.py        # Logging configuration
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Environment variables (create this)
 ├── .env.example           # Template for .env file
@@ -35,8 +38,11 @@ image-csv-chatbot/
 │       ├── chat.py        # Chat interface
 │       └── sidebar.py     # Sidebar components
 │
-├── ARCHITECTURE.md        # Architecture documentation
-└── README.md             # This file
+├── logs/                   # Application logs (auto-generated)
+│   └── chatbot_*.log      # Daily log files
+│
+├── ARCHITECTURE.md         # Architecture documentation
+└── README.md              # This file
 ```
 
 **Note**: This project follows clean architecture principles with clear separation between models, services, and UI layers. See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
@@ -130,6 +136,7 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 - **Watch the AI respond** with streaming output
 - **Continue the conversation** - the AI remembers your chat history
 - **Clear history** using the button in the sidebar to start fresh
+- **Toggle timestamps** in the sidebar to show/hide message times
 
 ### Features
 
@@ -139,7 +146,34 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 
 💾 **Session Persistence**: Chat history is maintained during your session
 
+⏱️ **Message Timestamps**: Optional timestamp display showing when each message was sent/replied
+
+📊 **Comprehensive Logging**: All events, errors, and interactions are logged for monitoring and debugging
+
 🎨 **Clean UI**: Simple, intuitive interface built with Streamlit
+
+### Timestamp Feature
+
+The chatbot now tracks when messages are sent and replied to:
+- **Toggle on/off** in the sidebar settings
+- **Format**: Shows time in 24-hour format (e.g., "14:30:15")
+- **Persistent**: Timestamps are saved with each message
+
+See [TIMESTAMP_FEATURE.md](TIMESTAMP_FEATURE.md) for detailed documentation.
+
+### Logging System
+
+The application includes enterprise-grade logging:
+- **Daily log files**: Automatically created in `logs/` directory
+- **Comprehensive tracking**: User actions, API calls, errors, performance
+- **Privacy-focused**: Logs metadata only, not message content
+- **Easy debugging**: Full error traces with context
+
+See [LOGGING.md](LOGGING.md) for detailed documentation on:
+- Log file locations and format
+- What events are logged
+- How to analyze logs
+- Privacy and security features
 
 ### Stopping the Application
 
