@@ -14,12 +14,13 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
 
 ```
 image-csv-chatbot/
-├── config.py           # Configuration and API initialization
-├── requirements.txt    # Python dependencies
-├── .env               # Environment variables (create this)
-├── .env.example       # Template for .env file
-├── .gitignore         # Git ignore rules
-└── README.md          # This file
+├── app.py             # Main Streamlit application
+├── config.py          # Configuration and API initialization
+├── requirements.txt   # Python dependencies
+├── .env              # Environment variables (create this)
+├── .env.example      # Template for .env file
+├── .gitignore        # Git ignore rules
+└── README.md         # This file
 ```
 
 ## Setup Instructions
@@ -88,7 +89,43 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 
 ## Usage
 
-*(Coming soon - App features and usage instructions will be added here)*
+### Running the Application
+
+1. **Make sure your virtual environment is activated**
+   ```powershell
+   .\venv\Scripts\Activate.ps1
+   ```
+
+2. **Run the Streamlit app**
+   ```powershell
+   streamlit run app.py
+   ```
+
+3. **Open your browser**
+   
+   The app will automatically open in your default browser at `http://localhost:8501`
+
+### Using the Chatbot
+
+- **Type your message** in the chat input at the bottom of the page
+- **Press Enter** to send your message
+- **Watch the AI respond** with streaming output
+- **Continue the conversation** - the AI remembers your chat history
+- **Clear history** using the button in the sidebar to start fresh
+
+### Features
+
+✨ **Multi-turn Conversations**: The chatbot maintains context throughout your conversation
+
+📝 **Streaming Responses**: See the AI's response appear in real-time
+
+💾 **Session Persistence**: Chat history is maintained during your session
+
+🎨 **Clean UI**: Simple, intuitive interface built with Streamlit
+
+### Stopping the Application
+
+Press `Ctrl+C` in the terminal where Streamlit is running
 
 ## Development
 

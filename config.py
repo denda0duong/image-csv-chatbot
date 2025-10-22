@@ -23,8 +23,8 @@ if not GOOGLE_API_KEY:
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # Initialize the Gemini model for vision and text
-# Using gemini-2.5-pro for multimodal capabilities (text + images)
-model = genai.GenerativeModel('gemini-2.5-pro')
+# Supports text, images, and up to 1 million tokens
+model = genai.GenerativeModel('gemini-2.5-flash')
 
-# Also provide a text-only model for CSV/text queries
-text_model = genai.GenerativeModel('gemini-2.5-flash')
+# Also provide a flash lite model for faster responses
+text_model = genai.GenerativeModel('gemini-2.5-flash-lite')
