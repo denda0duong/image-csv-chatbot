@@ -14,14 +14,32 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
 
 ```
 image-csv-chatbot/
-├── app.py             # Main Streamlit application
-├── config.py          # Configuration and API initialization
-├── requirements.txt   # Python dependencies
-├── .env              # Environment variables (create this)
-├── .env.example      # Template for .env file
-├── .gitignore        # Git ignore rules
-└── README.md         # This file
+├── app.py                  # Main application entry point
+├── config.py               # Configuration and API initialization
+├── requirements.txt        # Python dependencies
+├── .env                    # Environment variables (create this)
+├── .env.example           # Template for .env file
+├── .gitignore             # Git ignore rules
+│
+├── src/                    # Source code package
+│   ├── models/            # Data models and constants
+│   │   ├── constants.py   # Application constants
+│   │   └── message.py     # Message data structures
+│   │
+│   ├── services/          # Business logic
+│   │   ├── chat_history.py      # Chat state management
+│   │   ├── gemini_service.py    # AI model communication
+│   │   └── response_handler.py  # Response generation
+│   │
+│   └── ui/                # UI components
+│       ├── chat.py        # Chat interface
+│       └── sidebar.py     # Sidebar components
+│
+├── ARCHITECTURE.md        # Architecture documentation
+└── README.md             # This file
 ```
+
+**Note**: This project follows clean architecture principles with clear separation between models, services, and UI layers. See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed architecture documentation.
 
 ## Setup Instructions
 
