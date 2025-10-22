@@ -6,6 +6,7 @@ This is the main entry point for the application. The code is organized
 into separate modules for better maintainability and scalability.
 """
 
+import streamlit as st
 from src.models.constants import MessageRole
 from src.services.chat_history import ChatHistoryManager
 from src.services.gemini_service import GeminiChatService
@@ -70,9 +71,15 @@ class ChatbotApp:
         1. Add it to chat history
         2. Display the message with timestamp
         3. Generate and display AI response
+        4. Handle optional image input
         """
         if prompt := ChatUI.get_user_input():
             logger.info(f"User submitted message (length: {len(prompt)} chars)")
+            
+            # Check if there's an uploaded image
+            uploaded_image = st.session_state.get('uploaded_image', None)
+            if uploaded_image:
+                logger.info("User message includes an image")
             
             # Store user message with timestamp
             self.history_manager.add_message(MessageRole.USER.value, prompt)
@@ -88,9 +95,19 @@ class ChatbotApp:
                     prompt,
                     last_message.get("timestamp")
                 )
+                
+                # If there's an image, display it in the chat
+                if uploaded_image:
+                    with st.chat_message(MessageRole.USER.value):
+                        st.image(uploaded_image, caption="Uploaded Image", width="stretch")
             
-            # Generate and display AI response
-            self.response_handler.handle_response(prompt)
+            # Generate and display AI response (with image if present)
+            self.response_handler.handle_response(prompt, image=uploaded_image)
+            
+            # Clear the image from session state after processing
+            if uploaded_image and 'uploaded_image' in st.session_state:
+                del st.session_state['uploaded_image']
+                logger.info("Cleared uploaded image from session state")
 
 
 def main() -> None:

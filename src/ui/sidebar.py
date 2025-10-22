@@ -3,6 +3,7 @@ Sidebar UI component.
 """
 
 import streamlit as st
+from PIL import Image
 from ..services.chat_history import ChatHistoryManager
 
 
@@ -29,6 +30,11 @@ class SidebarUI:
         """Render the settings section."""
         st.header("⚙️ Settings")
         
+        # Image upload section
+        SidebarUI._render_image_upload()
+        
+        st.divider()
+        
         # Show timestamps toggle
         if "show_timestamps" not in st.session_state:
             st.session_state.show_timestamps = True
@@ -40,12 +46,40 @@ class SidebarUI:
         )
         
         # Clear chat button
-        if st.button("🗑️ Clear Chat History", use_container_width=True):
+        if st.button("🗑️ Clear Chat History", width="stretch"):
             ChatHistoryManager.clear()
             st.rerun()
         
         # Display message count
         st.info(f"💬 Messages in history: {message_count}")
+    
+    @staticmethod
+    def _render_image_upload() -> None:
+        """Render the image upload section."""
+        st.subheader("🖼️ Image Upload")
+        
+        uploaded_file = st.file_uploader(
+            "Upload an image",
+            type=['png', 'jpg', 'jpeg'],
+            help="Upload an image to discuss with the AI"
+        )
+        
+        if uploaded_file is not None:
+            # Convert uploaded file to PIL Image and store in session state
+            image = Image.open(uploaded_file)
+            st.session_state['uploaded_image'] = image
+            
+            # Display preview
+            st.image(image, caption="Uploaded Image", width='stretch')
+            
+            # Show remove button
+            if st.button("❌ Remove Image", width='stretch'):
+                if 'uploaded_image' in st.session_state:
+                    del st.session_state['uploaded_image']
+                st.rerun()
+        elif 'uploaded_image' in st.session_state:
+            # File uploader was cleared, remove from session state
+            del st.session_state['uploaded_image']
     
     @staticmethod
     def _render_about() -> None:
@@ -55,15 +89,18 @@ class SidebarUI:
         This chatbot uses Google's Gemini AI model to have intelligent conversations.
         
         **Features:**
-        - Multi-turn conversations
-        - Streaming responses
-        - Chat history persistence
-        - Context-aware responses
+        - 💬 Multi-turn conversations
+        - 📝 Streaming responses
+        - 💾 Chat history persistence
+        - 🧠 Context-aware responses
+        - 🖼️ Image analysis with vision AI
+        - ⏱️ Message timestamps
+        - 📊 Comprehensive logging
         
         **Coming Soon:**
         - 📊 CSV file analysis
-        - 🖼️ Image analysis
-        - 📁 File uploads
+        - � Multiple file uploads
+        - � Export chat history
         """)
     
     @staticmethod

@@ -3,6 +3,8 @@ Response handler for managing AI responses.
 """
 
 import streamlit as st
+from typing import Union
+from PIL import Image
 from ..models.constants import MessageRole, AppConfig
 from ..services.gemini_service import GeminiChatService
 from ..services.chat_history import ChatHistoryManager
@@ -24,14 +26,16 @@ class ResponseHandler:
         """
         self.chat_service = chat_service
     
-    def handle_response(self, prompt: str) -> None:
+    def handle_response(self, prompt: str, image: Union[Image.Image, None] = None) -> None:
         """
         Generate and display the AI response.
         
         Args:
             prompt: The user's input prompt
+            image: Optional PIL Image to include with the prompt
         """
-        logger.info("Handling user prompt")
+        image_info = " with image" if image else ""
+        logger.info(f"Handling user prompt{image_info}")
         
         with st.chat_message(MessageRole.ASSISTANT.value):
             with st.status(AppConfig.THINKING_MESSAGE, expanded=False) as status:
@@ -42,7 +46,8 @@ class ResponseHandler:
                     # Get streaming response
                     response_stream = self.chat_service.get_response_stream(
                         prompt, 
-                        ChatHistoryManager.get_messages()
+                        ChatHistoryManager.get_messages(),
+                        image=image
                     )
                     
                     # Display streamed response

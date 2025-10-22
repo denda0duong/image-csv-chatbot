@@ -2,7 +2,8 @@
 Gemini AI chat service.
 """
 
-from typing import List, Dict, Generator
+from typing import List, Dict, Generator, Union, Optional
+from PIL import Image
 from config import model
 from ..models.constants import MessageRole
 from ..models.message import GeminiMessage
@@ -42,7 +43,8 @@ class GeminiChatService:
     def get_response_stream(
         self, 
         prompt: str, 
-        history: List[Dict[str, str]]
+        history: List[Dict[str, str]],
+        image: Union[Image.Image, None] = None
     ) -> Generator[str, None, None]:
         """
         Get a streaming response from the model.
@@ -50,6 +52,7 @@ class GeminiChatService:
         Args:
             prompt: The user's input prompt
             history: Previous conversation history
+            image: Optional PIL Image to include in the request
             
         Yields:
             Chunks of the model's response
@@ -58,7 +61,8 @@ class GeminiChatService:
             Exception: If there's an error communicating with the model
         """
         try:
-            logger.info(f"Generating response for prompt (length: {len(prompt)} chars)")
+            image_info = " with image" if image else ""
+            logger.info(f"Generating response for prompt (length: {len(prompt)} chars){image_info}")
             logger.debug(f"History size: {len(history)} messages")
             
             # Convert history to Gemini format (excluding the current prompt)
@@ -67,8 +71,17 @@ class GeminiChatService:
             # Start chat with history
             chat = self.model.start_chat(history=gemini_history if gemini_history else [])
             
+            # Prepare the message content
+            if image:
+                # Send both text and image
+                message_content = [prompt, image]
+                logger.info(f"Sending multimodal request (text + image)")
+            else:
+                # Send text only
+                message_content = prompt
+            
             # Get streaming response
-            response = chat.send_message(prompt, stream=True)
+            response = chat.send_message(message_content, stream=True)
             
             chunk_count = 0
             # Yield response chunks
