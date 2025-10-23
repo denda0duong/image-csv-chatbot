@@ -148,8 +148,16 @@ class ChatbotApp:
             
             logger.info(f"[REQUEST] Sending to AI - User prompt: '{prompt[:100]}...'")
             
-            # Store user message with timestamp (original prompt, not enhanced)
-            self.history_manager.add_message(MessageRole.USER.value, prompt)
+            # Convert uploaded image to bytes for storage if present
+            image_bytes = None
+            if uploaded_image:
+                import io
+                img_byte_arr = io.BytesIO()
+                uploaded_image.save(img_byte_arr, format=uploaded_image.format or 'PNG')
+                image_bytes = img_byte_arr.getvalue()
+            
+            # Store user message with timestamp and image (original prompt, not enhanced)
+            self.history_manager.add_message(MessageRole.USER.value, prompt, image=image_bytes)
             
             # Get the last message (just added) to display with timestamp
             messages = self.history_manager.get_messages()
@@ -166,7 +174,7 @@ class ChatbotApp:
                 # If there's an image, display it in the chat
                 if uploaded_image:
                     with st.chat_message(MessageRole.USER.value):
-                        st.image(uploaded_image, caption="Uploaded Image", width="stretch")
+                        st.image(uploaded_image, caption="Uploaded Image", width='stretch')
                 
                 # If there's CSV data, show indicator in chat
                 if df is not None:

@@ -81,8 +81,12 @@ class SidebarUI:
             
             # Show remove button
             if st.button("❌ Remove Image", width='stretch', key="remove_image_button"):
+                # Clear both the session state and force file uploader to reset
                 if 'uploaded_image' in st.session_state:
                     del st.session_state['uploaded_image']
+                # Clear the file uploader by deleting its key
+                if 'image_file_uploader' in st.session_state:
+                    del st.session_state['image_file_uploader']
                 st.rerun()
         elif 'uploaded_image' in st.session_state:
             # File uploader was cleared, remove from session state

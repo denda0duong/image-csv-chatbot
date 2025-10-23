@@ -37,7 +37,17 @@ class ChatUI:
         
         for message in messages:
             with st.chat_message(message["role"]):
+                # Display user-uploaded image if present (for user messages)
+                if "image" in message and message["image"]:
+                    st.image(message["image"], width='stretch')
+                
                 st.markdown(message["content"])
+                
+                # Display plots if any are attached to this message (for assistant responses)
+                if "plots" in message and message["plots"]:
+                    for plot_data in message["plots"]:
+                        st.image(plot_data, width='stretch')
+                
                 # Display timestamp if available and enabled
                 if show_timestamps and "timestamp" in message and message["timestamp"]:
                     st.caption(f"🕐 {message['timestamp']}")

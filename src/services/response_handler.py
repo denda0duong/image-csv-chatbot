@@ -120,7 +120,7 @@ class ResponseHandler:
                     if plots:
                         logger.info(f"Displaying {len(plots)} plot(s)")
                         for i, plot in enumerate(plots):
-                            st.image(plot.image_data, use_container_width=True)
+                            st.image(plot.image_data, width='stretch')
                             if plot.description:
                                 st.caption(plot.description)
                     
@@ -136,9 +136,9 @@ class ResponseHandler:
                     ChatUI.display_error(full_response)
                     status.update(label=AppConfig.ERROR_MESSAGE, state="error")
             
-            # Add response to history with timestamp
-            # Note: plots are not stored in history (would be too heavy)
-            ChatHistoryManager.add_message(MessageRole.ASSISTANT.value, full_response)
+            # Add response to history with plots
+            plot_bytes = [plot.image_data for plot in plots] if plots else None
+            ChatHistoryManager.add_message(MessageRole.ASSISTANT.value, full_response, plots=plot_bytes)
             
             # Display timestamp for the assistant's response if enabled
             show_timestamps = st.session_state.get("show_timestamps", True)

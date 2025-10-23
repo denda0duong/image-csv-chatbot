@@ -3,7 +3,7 @@ Chat history management service.
 """
 
 import streamlit as st
-from typing import List, Dict
+from typing import List, Dict, Optional
 from ..models.message import ChatMessage
 from logger_config import get_logger
 
@@ -23,29 +23,33 @@ class ChatHistoryManager:
             logger.info("Chat history initialized")
     
     @staticmethod
-    def get_messages() -> List[Dict[str, str]]:
+    def get_messages() -> List[Dict]:
         """
         Get all messages from the chat history.
         
         Returns:
-            List of message dictionaries with 'role' and 'content' keys
+            List of message dictionaries with 'role', 'content', and optional 'plots' keys
         """
         messages = st.session_state.get(ChatHistoryManager.SESSION_KEY, [])
         logger.debug(f"Retrieved {len(messages)} messages from history")
         return messages
     
     @staticmethod
-    def add_message(role: str, content: str) -> None:
+    def add_message(role: str, content: str, plots: Optional[List[bytes]] = None, image: Optional[bytes] = None) -> None:
         """
         Add a message to the chat history.
         
         Args:
             role: The role of the message sender
             content: The content of the message
+            plots: Optional list of plot image data (as bytes)
+            image: Optional user-uploaded image data (as bytes)
         """
-        message = ChatMessage(role=role, content=content)
+        message = ChatMessage(role=role, content=content, plots=plots or [], image=image)
         st.session_state[ChatHistoryManager.SESSION_KEY].append(message.to_dict())
-        logger.info(f"Added {role} message to history (length: {len(content)} chars)")
+        plot_info = f" with {len(plots)} plot(s)" if plots else ""
+        image_info = " with image" if image else ""
+        logger.info(f"Added {role} message to history (length: {len(content)} chars{plot_info}{image_info})")
     
     @staticmethod
     def clear() -> None:
@@ -65,7 +69,7 @@ class ChatHistoryManager:
         return len(ChatHistoryManager.get_messages())
     
     @staticmethod
-    def get_last_n_messages(n: int) -> List[Dict[str, str]]:
+    def get_last_n_messages(n: int) -> List[Dict]:
         """
         Get the last N messages from history.
         
