@@ -4,17 +4,17 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        app.py                                │
-│                  (Entry Point - Orchestrator)                │
-│                                                               │
+│                        app.py                               │
+│                  (Entry Point - Orchestrator)               │
+│                                                             │
 │  ┌────────────────────────────────────────────────────────┐ │
-│  │            ChatbotApp (Orchestrator)                    │ │
-│  │  - Initializes logging system                           │ │
-│  │  - Initializes all components                           │ │
-│  │  - Coordinates application flow                         │ │
-│  │  - Handles CSV upload and image upload                  │ │
-│  │  - Routes to plot-aware or regular response handlers    │ │
-│  │  - Minimal business logic                               │ │
+│  │            ChatbotApp (Orchestrator)                   │ │
+│  │  - Initializes logging system                          │ │
+│  │  - Initializes all components                          │ │
+│  │  - Coordinates application flow                        │ │
+│  │  - Handles CSV upload and image upload                 │ │
+│  │  - Routes to plot-aware or regular response handlers   │ │
+│  │  - Minimal business logic                              │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
                             │
@@ -36,20 +36,20 @@
 ## 📦 Layer Responsibilities
 
 ```
-┌─────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────┐
 │                     MODELS LAYER                         │
 │  - Data structures (ChatMessage, GeminiMessage, PlotData)│
-│  - Constants and enums (MessageRole, AppConfig)         │
-│  - Timestamp support for messages                       │
-│  - Image and plot data support (binary bytes)           │
-│  - No dependencies on other layers                      │
-│  - Pure Python, framework-agnostic                      │
-└─────────────────────────────────────────────────────────┘
+│  - Constants and enums (MessageRole, AppConfig)          │
+│  - Timestamp support for messages                        │
+│  - Image and plot data support (binary bytes)            │
+│  - No dependencies on other layers                       │
+│  - Pure Python, framework-agnostic                       │
+└──────────────────────────────────────────────────────────┘
                             │
                             │ uses
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   SERVICES LAYER                         │
+│                   SERVICES LAYER                        │
 │  - Business logic and data processing                   │
 │  - ChatHistoryManager: State + persistence + logging    │
 │  - GeminiChatService: AI communication + plot extract   │
@@ -65,7 +65,7 @@
                             │ used by
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│                      UI LAYER                            │
+│                      UI LAYER                           │
 │  - Streamlit-specific components                        │
 │  - ChatUI: Chat interface + timestamp + image/plots     │
 │  - SidebarUI: Sidebar + settings + uploads              │
@@ -75,7 +75,7 @@
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│                   LOGGING SYSTEM                         │
+│                   LOGGING SYSTEM                        │
 │  - logger_config.py: Centralized configuration          │
 │  - Daily log files in logs/ directory                   │
 │  - File handler: All events (INFO+)                     │
@@ -85,7 +85,7 @@
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
-│                 PERSISTENCE SYSTEM                       │
+│                 PERSISTENCE SYSTEM                      │
 │  - JSON files in chat_sessions/ directory               │
 │  - Automatic save after each message                    │
 │  - Base64 encoding for binary data (images, plots)      │
@@ -136,7 +136,7 @@ User Input
 │ ChatHistoryManager  │ Store AI response (with timestamp)
 │   add_message()     │ [LOGGED] → Auto-save to JSON
 └─────────────────────┘
-
+```
 ### Plot Generation Flow
 ```
 User Input (with plot keywords)
@@ -184,7 +184,7 @@ User Input (with plot keywords)
 │ ChatHistoryManager  │ Store AI response + plots (as bytes)
 │ add_message(plots)  │ [LOGGED] → Auto-save to JSON (base64)
 └─────────────────────┘
-
+```
 ### Page Refresh Flow
 ```
 Page Refresh (F5)
@@ -221,25 +221,6 @@ st.session_state cleared
 │   ChatUI       │ Render all messages (with images/plots)
 │ render_msgs()  │
 └────────────────┘
-```
-│ GeminiChatService   │ Get AI response
-│ get_response_stream()│ [LOGGED: request, chunks, completion]
-└─────────────────────┘
-    │
-    ▼
-┌────────────────┐
-│   ChatUI       │ Display response (with timestamp)
-│ display_stream()│
-└────────────────┘
-    │
-    ▼
-┌─────────────────────┐
-│ ChatHistoryManager  │ Store AI response (with timestamp)
-│   add_message()     │ [LOGGED]
-└─────────────────────┘
-    │
-    ▼
-User sees response + optional timestamp
 ```
 
 ## 🗂️ File Organization
@@ -299,7 +280,7 @@ project-root/
        │                        │   │
        ├─► ResponseHandler ◄────┤   │
        │                        │   │
-       ├─► ChatUI              │   │
+       ├─► ChatUI               │   │
        │   ├─ render_header()   │   │
        │   ├─ render_messages()◄┼───┤
        │   ├─ get_user_input()  │   │
@@ -317,35 +298,35 @@ project-root/
 
 ```
 ┌────────────────────────────────────────────────────────┐
-│                  FACADE PATTERN                         │
-│                                                         │
+│                  FACADE PATTERN                        │
+│                                                        │
 │  ChatUI, SidebarUI                                     │
 │  - Simple interfaces hiding complexity                 │
-│  - Easy to use, hard to misuse                        │
+│  - Easy to use, hard to misuse                         │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
-│                 SERVICE PATTERN                         │
-│                                                         │
+│                 SERVICE PATTERN                        │
+│                                                        │
 │  GeminiChatService, ChatHistoryManager                 │
 │  - Encapsulate business logic                          │
-│  - Reusable across features                           │
+│  - Reusable across features                            │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
-│               DEPENDENCY INJECTION                      │
-│                                                         │
+│               DEPENDENCY INJECTION                     │
+│                                                        │
 │  ResponseHandler(chat_service)                         │
 │  - Loose coupling                                      │
-│  - Easy to test and swap implementations              │
+│  - Easy to test and swap implementations               │
 └────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────┐
-│                STATIC METHODS                           │
-│                                                         │
+│                STATIC METHODS                          │
+│                                                        │
 │  ChatUI.render_header()                                │
 │  - Stateless utilities                                 │
-│  - No instantiation needed                            │
+│  - No instantiation needed                             │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -377,29 +358,29 @@ ChatHistoryManager    + DatabaseManager
 ```
 ┌──────────────────────────────────────────────────────┐
 │  Want to add CSV analysis?                           │
-│                                                       │
-│  1. Create: src/services/csv_service.py             │
-│  2. Create: src/ui/csv_upload.py                    │
+│                                                      │
+│  1. Create: src/services/csv_service.py              │
+│  2. Create: src/ui/csv_upload.py                     │
 │  3. Import in app.py                                 │
-│  4. Done! No changes to existing code               │
+│  4. Done! No changes to existing code                │
 └──────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────┐
 │  Want to switch UI framework?                        │
-│                                                       │
-│  1. Keep: Models and Services (unchanged)           │
-│  2. Replace: UI layer only                          │
-│  3. Update: app.py imports                          │
-│  4. 80% of code stays the same!                     │
+│                                                      │
+│  1. Keep: Models and Services (unchanged)            │
+│  2. Replace: UI layer only                           │
+│  3. Update: app.py imports                           │
+│  4. 80% of code stays the same!                      │
 └──────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────┐
 │  Want to add testing?                                │
-│                                                       │
+│                                                      │
 │  1. Test services independently                      │
 │  2. Mock dependencies easily                         │
-│  3. No need to test UI separately                   │
-│  4. Clear boundaries make testing easy              │
+│  3. No need to test UI separately                    │
+│  4. Clear boundaries make testing easy               │
 └──────────────────────────────────────────────────────┘
 ```
 

@@ -225,14 +225,6 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
    - 🔥 Heatmaps
    - And more!
 
-#### Performance Monitoring
-- **Built-in diagnostics**: Run `python test_performance_diagnosis.py quick` to test baseline performance
-- **Detailed timing logs**: Check `logs/chatbot_*.log` for performance metrics
-  - `[UPLOAD]`: CSV file upload timing
-  - `[REQUEST]`: Request processing timing
-  - `[RESPONSE]`: AI response timing (first chunk is key metric)
-- **Performance guide**: See `PERFORMANCE_GUIDE.md` for troubleshooting slow responses
-
 #### Tips for Best Results
 - 💬 Ask clear, specific questions
 - 🖼️ Use high-quality images for better analysis
