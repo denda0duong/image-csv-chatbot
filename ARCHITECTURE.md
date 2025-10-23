@@ -21,6 +21,8 @@ image-csv-chatbot/
 │   ├── services/              # Business logic and services
 │   │   ├── chat_history.py   # Chat history management
 │   │   ├── gemini_service.py # Gemini API communication
+│   │   ├── csv_service.py    # CSV processing with token management
+│   │   ├── prompts.py        # Centralized prompt templates
 │   │   └── response_handler.py # Response generation handling
 │   │
 │   └── ui/                    # User interface components
@@ -32,6 +34,8 @@ image-csv-chatbot/
 │
 ├── README.md                  # Main documentation
 ├── ARCHITECTURE.md            # This file
+├── PERFORMANCE_GUIDE.md       # Performance troubleshooting guide
+└── TOKEN_ESTIMATION.md        # Token management documentation
 ```
 
 ## 🏗️ Architecture Principles
@@ -82,6 +86,31 @@ The project follows clean architecture principles with clear separation of conce
    - Different response strategies possible
    - Easy to add new features
 
+5. **Generator Pattern**
+   - Streaming responses use generators
+   - Memory efficient for large responses
+   - Immediate feedback to users
+
+### Code Quality Principles
+
+1. **Clean and Focused**
+   - Each service has a single responsibility
+   - No text-based fallback code (uses File Upload API exclusively)
+   - Consolidated error handling
+   - Removed redundant methods
+
+2. **Performance Monitoring**
+   - Comprehensive timing logs with markers: `[UPLOAD]`, `[REQUEST]`, `[RESPONSE]`
+   - First chunk time as key performance indicator
+   - Automatic bottleneck detection
+   - Built-in diagnostic tools
+
+3. **Token Management**
+   - Proactive token estimation before upload
+   - Automatic validation against model limits
+   - Clear user feedback on token usage
+   - Prevention of API errors due to token limits
+
 ## 🔧 Component Details
 
 ### Models (`src/models/`)
@@ -116,6 +145,22 @@ The project follows clean architecture principles with clear separation of conce
 - Streaming and non-streaming responses
 - Format conversion
 - Detailed logging with error tracking and performance metrics
+- Response timing tracking (first chunk, total chunks)
+
+**csv_service.py**
+- `CSVService`: CSV file processing
+- Token estimation and validation
+- File Upload API integration
+- Comprehensive timing logs for upload operations
+- Methods:
+  - `estimate_tokens()`: Calculate token usage before upload
+  - `validate_tokens()`: Check against model limits (1M tokens)
+  - `upload_csv_to_gemini()`: Upload with detailed timing
+
+**prompts.py**
+- Centralized prompt templates
+- CSV analysis prompts
+- System instructions
 
 **response_handler.py**
 - `ResponseHandler`: Orchestrates response generation
@@ -214,28 +259,54 @@ class UploadedFile:
 ## 📊 Recent Enhancements
 
 ### Implemented Features
-- ✅ **Message Timestamps**: Track when messages are sent/replied
+
+- ✅ **CSV File Upload with Token Management**
+  - Token estimation before upload (preview usage)
+  - Token validation against 1M token limit
+  - File Upload API integration (CSV data doesn't consume tokens)
+  - Comprehensive upload timing logs
+
+- ✅ **Performance Diagnostics System**
+  - Three-marker logging system: `[UPLOAD]`, `[REQUEST]`, `[RESPONSE]`
+  - Detailed timing for all operations
+  - First chunk time as key performance indicator
+  - Automated performance testing tool
+  - Bottleneck detection and recommendations
+
+- ✅ **Code Cleanup (39% Reduction)**
+  - Removed text-based fallback methods (uses File Upload API exclusively)
+  - Consolidated error handling (7 handlers → 1)
+  - Removed unused methods and redundant code
+  - Reduced from 737 lines to 449 lines across main services
+
+- ✅ **Message Timestamps**
+  - Track when messages are sent/replied
   - Optional display with sidebar toggle
   - Persistent timestamp storage
-  - See [TIMESTAMP_FEATURE.md](TIMESTAMP_FEATURE.md)
 
-- ✅ **Comprehensive Logging**: Enterprise-grade logging system
+- ✅ **Comprehensive Logging**
+  - Enterprise-grade logging system
   - Daily log files in `logs/` directory
   - File and console handlers
   - Privacy-focused (metadata only)
-  - See [LOGGING.md](LOGGING.md)
+  - Performance timing included
+
+- ✅ **Image Analysis**
+  - Vision AI with Gemini
+  - Multiple format support
+  - OCR and object detection
 
 ### Future Enhancements
 
 Ready for:
-- CSV file upload and analysis
-- Image upload and vision analysis
 - Multiple chat sessions
 - Export chat history
 - Custom system prompts
 - Response templates
 - User preferences
 - Analytics dashboard
+- Advanced CSV filtering
+- Data visualization
 
 ## 🔒 Security Considerations
 
@@ -244,6 +315,8 @@ Ready for:
 3. **Rate Limiting**: Handle API rate limits gracefully
 4. **Error Messages**: Don't expose sensitive information
 5. **Session State**: Clear sensitive data on logout
+6. **Token Limits**: Validate before upload to prevent API errors
+7. **File Size**: Check file sizes before processing
 
 ## 🎯 Best Practices
 
@@ -254,6 +327,23 @@ Ready for:
 5. **Test new features**
 6. **Keep dependencies minimal**
 7. **Document architectural decisions**
+8. **Monitor performance with logging**
+9. **Validate tokens before upload**
+10. **Use generators for streaming responses**
+
+### Performance Metrics
+The tool measures:
+1. **Token estimation time** (should be < 1s)
+2. **Token validation time** (should be < 0.1s)
+3. **File upload time** (varies by size: 2-15s)
+4. **First chunk time** (KEY: 3-30s for normal operation)
+5. **Total response time** (complete answer)
+
+### Expected Performance
+- Small files (< 1K rows): 10-20s total
+- Medium files (1K-10K rows): 20-40s total
+- Large files (10K-50K rows): 40-90s total
+- Complex analysis prompts: 30-60s is NORMAL for large datasets
 
 ## 📚 References
 

@@ -28,3 +28,6 @@ model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Also provide a flash lite model for faster responses
 text_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+
+# Export model name for use with new genai.Client() API
+MODEL_NAME = 'gemini-2.5-flash'

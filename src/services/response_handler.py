@@ -26,16 +26,18 @@ class ResponseHandler:
         """
         self.chat_service = chat_service
     
-    def handle_response(self, prompt: str, image: Union[Image.Image, None] = None) -> None:
+    def handle_response(self, prompt: str, image: Union[Image.Image, None] = None, uploaded_file_ref = None) -> None:
         """
         Generate and display the AI response.
         
         Args:
             prompt: The user's input prompt
             image: Optional PIL Image to include with the prompt
+            uploaded_file_ref: Optional file reference from genai.Client().files.upload()
         """
         image_info = " with image" if image else ""
-        logger.info(f"Handling user prompt{image_info}")
+        file_info = " with uploaded file" if uploaded_file_ref else ""
+        logger.info(f"Handling user prompt{image_info}{file_info}")
         
         with st.chat_message(MessageRole.ASSISTANT.value):
             with st.status(AppConfig.THINKING_MESSAGE, expanded=False) as status:
@@ -47,7 +49,8 @@ class ResponseHandler:
                     response_stream = self.chat_service.get_response_stream(
                         prompt, 
                         ChatHistoryManager.get_messages(),
-                        image=image
+                        image=image,
+                        uploaded_file_ref=uploaded_file_ref
                     )
                     
                     # Display streamed response

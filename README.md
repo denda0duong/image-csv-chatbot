@@ -5,13 +5,23 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
 ## Features
 
 - 🤖 **Multi-turn AI Conversations** - Chat with Google Gemini AI with context awareness
-- �️ **Image Analysis** - Upload and analyze images with AI vision capabilities
+- 🖼️ **Image Analysis** - Upload and analyze images with AI vision capabilities
   - Supported formats: PNG, JPG, JPEG
   - Image description, object detection, text extraction (OCR)
   - Visual question answering
-- 📊 **CSV File Analysis** - Upload and analyze data files (Coming Soon)
+- 📊 **CSV File Analysis** - Upload and analyze data files with AI
+  - **File Upload API**: Direct CSV upload to Gemini (no token usage for CSV data!)
+  - **Token Estimation**: Preview token usage before processing large files
+  - **Token Validation**: Automatic verification against model limits (1M tokens)
+  - Support for file uploads and URLs
+  - Automatic data analysis and insights
+  - Missing value detection and reporting
+  - Statistical queries (averages, counts, correlations, etc.)
+  - Natural language data exploration
+  - Supports files up to 2GB (50K rows recommended for performance)
 - ⏱️ **Message Timestamps** - Track when messages are sent and replied
-- 📋 **Comprehensive Logging** - Monitor app activity, debug issues, track performance
+- 📋 **Comprehensive Logging** - Monitor app activity, debug issues, track performance with detailed timing
+- 🔍 **Performance Diagnostics** - Built-in tools to identify and troubleshoot performance bottlenecks
 - 🔒 **Secure API Management** - Environment variable-based API key storage
 - ⚡ **Fast & Interactive** - Built with Streamlit for responsive UI
 - 💾 **Session Persistence** - Chat history maintained during your session
@@ -36,6 +46,8 @@ image-csv-chatbot/
 │   ├── services/          # Business logic
 │   │   ├── chat_history.py      # Chat state management
 │   │   ├── gemini_service.py    # AI model communication
+│   │   ├── csv_service.py       # CSV processing with token estimation/validation
+│   │   ├── prompts.py           # Centralized prompt templates
 │   │   └── response_handler.py  # Response generation
 │   │
 │   └── ui/                # UI components
@@ -43,9 +55,12 @@ image-csv-chatbot/
 │       └── sidebar.py     # Sidebar components
 │
 ├── logs/                   # Application logs (auto-generated)
-│   └── chatbot_*.log      # Daily log files
+│   └── chatbot_*.log      # Daily log files with performance timing
 │
+├── test_performance_diagnosis.py  # Performance testing tool
 ├── ARCHITECTURE.md         # Architecture documentation
+├── PERFORMANCE_GUIDE.md    # Performance troubleshooting guide
+├── TOKEN_ESTIMATION.md     # Token estimation documentation
 └── README.md              # This file
 ```
 
@@ -156,6 +171,31 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 4. **Get AI analysis** - the image is sent with your prompt
 5. **Image auto-clears** - ready for the next image
 
+#### CSV File Analysis
+1. **Upload a CSV file** in the sidebar (📊 CSV Upload section)
+   - Drag and drop or click to browse
+   - Supported formats: .csv files
+   - **Token estimation** shown before upload (Preview: ~X tokens)
+   - **Automatic validation** against 1M token limit
+2. **File uploads to Gemini** using File Upload API
+   - CSV data doesn't count toward prompt token limits
+   - Supports large files (up to 2GB, 50K rows recommended)
+3. **Ask questions** about your data
+   - "What are the main insights from this dataset?"
+   - "Show me the average of column X"
+   - "Which rows have missing values?"
+   - "What correlations exist in this data?"
+4. **Get AI-powered analysis** with streaming responses
+5. **CSV persists** during your session until you clear or upload new file
+
+#### Performance Monitoring
+- **Built-in diagnostics**: Run `python test_performance_diagnosis.py quick` to test baseline performance
+- **Detailed timing logs**: Check `logs/chatbot_*.log` for performance metrics
+  - `[UPLOAD]`: CSV file upload timing
+  - `[REQUEST]`: Request processing timing
+  - `[RESPONSE]`: AI response timing (first chunk is key metric)
+- **Performance guide**: See `PERFORMANCE_GUIDE.md` for troubleshooting slow responses
+
 #### Tips for Best Results
 - 💬 Ask clear, specific questions
 - 🖼️ Use high-quality images for better analysis
@@ -180,36 +220,17 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 ⏱️ **Message Timestamps**: Optional timestamp display showing when each message was sent/replied
 
 📊 **Comprehensive Logging**: All events, errors, and interactions are logged for monitoring and debugging
+- **Performance timing**: Upload, request, and response metrics
+- **Token tracking**: Estimation and validation logging
+- **Streaming metrics**: First chunk time and total chunks
+
+📈 **CSV Analysis with Token Management**:
+- **Token estimation**: Preview token usage before upload
+- **Token validation**: Automatic check against 1M token limit
+- **File Upload API**: CSV data doesn't consume prompt tokens
+- **Performance diagnostics**: Built-in tools for troubleshooting
 
 🎨 **Clean UI**: Simple, intuitive interface built with Streamlit
-
-### Additional Documentation
-
-#### Timestamp Feature
-The chatbot tracks when messages are sent and replied to:
-- **Toggle on/off** in the sidebar settings
-- **Format**: Shows time in 24-hour format (e.g., "14:30:15")
-- **Persistent**: Timestamps are saved with each message
-
-📖 See [TIMESTAMP_FEATURE.md](TIMESTAMP_FEATURE.md) for detailed documentation.
-
-#### Image Analysis Feature
-Upload and analyze images with AI vision:
-- **Supported formats**: PNG, JPG, JPEG
-- **Use cases**: Image description, OCR, object detection, visual Q&A
-- **Privacy**: Images auto-cleared after one use
-- **Integration**: Seamlessly works with chat context
-
-📖 See [IMAGE_FEATURE.md](IMAGE_FEATURE.md) for complete guide with examples.
-
-#### Logging System
-Enterprise-grade logging for monitoring and debugging:
-- **Daily log files**: Automatically created in `logs/` directory
-- **Comprehensive tracking**: User actions, API calls, errors, performance
-- **Privacy-focused**: Logs metadata only, not message content
-- **Easy debugging**: Full error traces with context
-
-📖 See [LOGGING.md](LOGGING.md) for detailed documentation.
 
 ### Stopping the Application
 
@@ -266,10 +287,6 @@ This project follows **clean architecture principles** with clear separation of 
 - 📖 [README.md](README.md) - This file (setup and usage guide)
 - 🏗️ [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture documentation
 - 📊 [ARCHITECTURE_VISUAL.md](ARCHITECTURE_VISUAL.md) - Visual architecture diagrams
-- ⏱️ [TIMESTAMP_FEATURE.md](TIMESTAMP_FEATURE.md) - Timestamp feature guide
-- 🖼️ [IMAGE_FEATURE.md](IMAGE_FEATURE.md) - Image analysis feature guide
-- 📋 [LOGGING.md](LOGGING.md) - Logging system documentation
-- 🚀 [IMAGE_IMPLEMENTATION.md](IMAGE_IMPLEMENTATION.md) - Image feature implementation details
 
 ## License
 

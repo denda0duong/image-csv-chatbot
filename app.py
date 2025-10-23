@@ -12,6 +12,7 @@ from src.services.chat_history import ChatHistoryManager
 from src.services.gemini_service import GeminiChatService
 from src.services.response_handler import ResponseHandler
 from src.services.csv_service import CSVService
+from src.services.prompts import DataAnalystPrompts
 from src.ui.chat import ChatUI
 from src.ui.sidebar import SidebarUI
 from logger_config import LoggerConfig, get_logger
@@ -73,7 +74,7 @@ class ChatbotApp:
         2. Display the message with timestamp
         3. Generate and display AI response
         4. Handle optional image input
-        5. Handle optional CSV data
+        5. Handle optional CSV data (via file upload to Gemini)
         """
         if prompt := ChatUI.get_user_input():
             logger.info(f"User submitted message (length: {len(prompt)} chars)")
@@ -85,30 +86,53 @@ class ChatbotApp:
             
             # Check if there's a loaded CSV DataFrame
             df = st.session_state.get('df', None)
-            if df is not None:
-                logger.info(f"User message includes CSV data: {df.shape[0]} rows, {df.shape[1]} columns")
+            uploaded_csv_file = None
             
-            # Prepare the enhanced prompt with CSV context if available
-            enhanced_prompt = prompt
             if df is not None:
-                # Generate CSV context using CSVService
-                csv_context = CSVService.generate_context_for_ai(df)
-                # Create augmented prompt with data analyst role
-                enhanced_prompt = f"""{csv_context}
-
-IMPORTANT INSTRUCTIONS:
-- You have access to the COMPLETE dataset above (all {df.shape[0]:,} rows and {df.shape[1]} columns)
-- Analyze the actual data, not just the schema
-- Give direct, specific answers with exact numbers, column names, and values
-- If asked about missing values, check the "Missing Values" section above
-- If no missing values are listed, state "No missing values found in the dataset"
-- Provide concrete examples from the actual data when relevant
-- Be concise and factual
-
-User's question: {prompt}"""
-                logger.info(f"Enhanced prompt with CSV context (total length: {len(enhanced_prompt)} chars, context: {len(csv_context)} chars)")
-            else:
-                logger.debug("No CSV data to include in prompt")
+                logger.info(f"[REQUEST] CSV present: {df.shape[0]} rows × {df.shape[1]} cols")
+                
+                # Validate token limits before uploading
+                import time
+                validate_start = time.time()
+                test_prompt = DataAnalystPrompts.get_file_upload_prompt(prompt)
+                validation = CSVService.validate_token_limit(df, test_prompt)
+                validate_time = time.time() - validate_start
+                logger.info(f"[REQUEST] Token validation: {validate_time:.2f}s - {validation['message']}")
+                
+                if not validation['is_valid']:
+                    logger.warning(f"[REQUEST] Token limit exceeded: {validation['estimated_total_tokens']:,} tokens")
+                    st.error(f"❌ **Token Limit Exceeded**\n\n{validation['message']}\n\n"
+                            "Reduce dataset size by filtering rows or removing columns.")
+                    return
+                
+                if validation['estimated_total_tokens'] > 500_000:
+                    st.info(f"ℹ️ Large dataset - {validation['message']}")
+                
+                # Upload CSV to Gemini
+                if 'uploaded_csv_file' not in st.session_state or st.session_state.get('csv_changed', True):
+                    logger.info("[REQUEST] Uploading CSV to Gemini...")
+                    uploaded_csv_file = CSVService.upload_csv_to_gemini(df)
+                    if uploaded_csv_file:
+                        st.session_state['uploaded_csv_file'] = uploaded_csv_file
+                        st.session_state['csv_changed'] = False
+                        logger.info("[REQUEST] CSV upload successful")
+                    else:
+                        logger.error("[REQUEST] CSV upload failed")
+                else:
+                    uploaded_csv_file = st.session_state.get('uploaded_csv_file')
+                    logger.info(f"[REQUEST] Using cached uploaded file: {uploaded_csv_file.name if uploaded_csv_file else 'None'}")
+            
+            # Prepare enhanced prompt
+            enhanced_prompt = prompt
+            if uploaded_csv_file:
+                enhanced_prompt = DataAnalystPrompts.get_file_upload_prompt(prompt)
+                logger.info(f"[REQUEST] Enhanced prompt: {len(enhanced_prompt)} chars")
+            elif df is not None:
+                logger.error("[REQUEST] CSV present but upload failed")
+                st.error("❌ Upload failed - please reload the CSV file")
+                return
+            
+            logger.info(f"[REQUEST] Sending to AI - User prompt: '{prompt[:100]}...'")
             
             # Store user message with timestamp (original prompt, not enhanced)
             self.history_manager.add_message(MessageRole.USER.value, prompt)
@@ -133,10 +157,16 @@ User's question: {prompt}"""
                 # If there's CSV data, show indicator in chat
                 if df is not None:
                     with st.chat_message(MessageRole.USER.value):
-                        st.caption(f"📊 Using loaded CSV: {df.shape[0]:,} rows × {df.shape[1]} columns")
+                        upload_status = "📤 File uploaded to Gemini" if uploaded_csv_file else "⚠️ Upload failed"
+                        st.caption(f"{upload_status}: {df.shape[0]:,} rows × {df.shape[1]} columns")
             
-            # Generate and display AI response (with enhanced prompt and image if present)
-            self.response_handler.handle_response(enhanced_prompt, image=uploaded_image)
+            # Generate and display AI response
+            # Pass uploaded_csv_file if using file upload, otherwise image only
+            self.response_handler.handle_response(
+                enhanced_prompt, 
+                image=uploaded_image,
+                uploaded_file_ref=uploaded_csv_file
+            )
             
             # Clear the image from session state after processing
             if uploaded_image and 'uploaded_image' in st.session_state:

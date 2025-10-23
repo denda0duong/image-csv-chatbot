@@ -67,7 +67,7 @@ class SidebarUI:
         uploaded_file = st.file_uploader(
             "Upload an image",
             type=['png', 'jpg', 'jpeg'],
-            help="Upload an image to discuss with the AI",
+            help="Upload an image to discuss with AI. Vision model supports detailed image analysis!",
             key="image_file_uploader"
         )
         
@@ -97,7 +97,7 @@ class SidebarUI:
         uploaded_csv = st.file_uploader(
             "Upload a CSV file",
             type=['csv'],
-            help="Upload a CSV file to analyze with the AI",
+            help="Upload a CSV file to analyze with AI. Supports files up to 2GB using file upload API!",
             key="csv_file_uploader"
         )
         
@@ -105,7 +105,7 @@ class SidebarUI:
         csv_url = st.text_input(
             "Or enter CSV URL",
             placeholder="https://example.com/data.csv",
-            help="Provide a direct URL to a CSV file",
+            help="Provide a direct URL to a CSV file. Supports large files up to 2GB!",
             key="csv_url_input"
         )
         
@@ -119,11 +119,19 @@ class SidebarUI:
                 df = CSVService.load_csv(uploaded_csv)
                 if df is not None:
                     st.session_state['df'] = df
+                    st.session_state['csv_changed'] = True  # Mark as changed for re-upload
+                    # Clear any existing uploaded file reference
+                    if 'uploaded_csv_file' in st.session_state:
+                        del st.session_state['uploaded_csv_file']
                     st.rerun()
             elif csv_url.strip():
                 df = CSVService.load_csv(csv_url)
                 if df is not None:
                     st.session_state['df'] = df
+                    st.session_state['csv_changed'] = True  # Mark as changed for re-upload
+                    # Clear any existing uploaded file reference
+                    if 'uploaded_csv_file' in st.session_state:
+                        del st.session_state['uploaded_csv_file']
                     st.rerun()
             else:
                 st.warning("⚠️ Please upload a file or enter a URL first")
@@ -137,13 +145,42 @@ class SidebarUI:
             # Show summary
             st.caption(f"**{df.shape[0]:,}** rows × **{df.shape[1]}** columns")
             
+            # Show token estimation
+            estimated_tokens = CSVService.estimate_csv_tokens(df)
+            max_tokens = 1_000_000
+            token_percentage = (estimated_tokens / max_tokens) * 100
+            
+            # Color-code based on usage
+            if estimated_tokens > max_tokens:
+                st.error(f"🚫 **Token Limit Exceeded!**\n\n"
+                        f"Estimated: ~{estimated_tokens:,} tokens\n"
+                        f"Maximum: {max_tokens:,} tokens\n\n"
+                        f"⚠️ This file is **too large** to process.\n"
+                        f"Please reduce the dataset size.")
+            elif token_percentage > 80:
+                st.warning(f"⚠️ **High Token Usage**\n\n"
+                          f"~{estimated_tokens:,} / {max_tokens:,} tokens ({token_percentage:.1f}%)\n\n"
+                          f"File is near the limit. Consider reducing size for better performance.")
+            elif token_percentage > 50:
+                st.info(f"ℹ️ **Token Usage**\n\n"
+                       f"~{estimated_tokens:,} / {max_tokens:,} tokens ({token_percentage:.1f}%)\n\n"
+                       f"Moderate file size - should process fine.")
+            else:
+                st.success(f"✅ **Token Usage**\n\n"
+                          f"~{estimated_tokens:,} / {max_tokens:,} tokens ({token_percentage:.1f}%)\n\n"
+                          f"Small file - optimal for fast processing!")
+            
             # Show first 5 rows
-            st.dataframe(df.head(), use_container_width=True)
+            st.dataframe(df.head(), width='stretch')
             
             # Remove CSV button
             if st.button("❌ Remove CSV", width='stretch', key="remove_csv_button"):
                 if 'df' in st.session_state:
                     del st.session_state['df']
+                if 'uploaded_csv_file' in st.session_state:
+                    del st.session_state['uploaded_csv_file']
+                if 'csv_changed' in st.session_state:
+                    del st.session_state['csv_changed']
                 st.rerun()
     
     @staticmethod
@@ -159,12 +196,14 @@ class SidebarUI:
         - 💾 Chat history persistence
         - 🧠 Context-aware responses
         - 🖼️ Image analysis with vision AI
-        - 📊 CSV data analysis
+        - 📊 CSV data analysis with file upload API
+        - 📤 **Supports files up to 2GB** (CSV & images)
+        - 🚀 No token usage for CSV data
         - ⏱️ Message timestamps
-        - � Comprehensive logging
+        - 📋 Comprehensive logging
         
         **Coming Soon:**
-        - � Multiple file uploads
+        - 📎 Multiple file uploads
         - 💾 Export chat history
         """)
     
