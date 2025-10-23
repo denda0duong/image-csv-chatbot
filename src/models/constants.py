@@ -32,3 +32,7 @@ class AppConfig:
         "❌ Error: {error}\n\n"
         "Please check your API key in the .env file and try again."
     )
+    
+    # Plot Configuration
+    PLOT_MIME_TYPES = ["image/png", "image/jpeg"]
+    EXECUTABLE_CODE_MIME_TYPE = "text/x.executable"

@@ -4,9 +4,10 @@ Gemini AI chat service.
 
 from typing import List, Dict, Generator, Union
 from PIL import Image
-from config import model, MODEL_NAME
+from config import model, MODEL_NAME, GENERATION_CONFIG_WITH_CODE_EXECUTION
 from ..models.constants import MessageRole
 from ..models.message import GeminiMessage
+from .plot_service import PlotService
 from logger_config import get_logger
 
 # Import new genai client for file upload support
@@ -136,3 +137,108 @@ class GeminiChatService:
             response = self.model.generate_content(prompt)
         
         return response.text
+    
+    def get_response_with_plots(
+        self,
+        prompt: str,
+        history: List[Dict[str, str]],
+        image: Union[Image.Image, None] = None,
+        uploaded_file_ref = None
+    ) -> Dict[str, any]:
+        """
+        Get response from model and extract any generated plots.
+        
+        This is used for non-streaming responses when plots might be generated.
+        Gemini's code execution generates plots that are included in the response.
+        
+        Args:
+            prompt: The user's input prompt
+            history: Previous conversation history
+            image: Optional image to include
+            uploaded_file_ref: Optional uploaded file reference
+            
+        Returns:
+            Dictionary containing:
+                - 'text': Response text
+                - 'plots': List of PlotData objects
+        """
+        import time
+        
+        try:
+            start_time = time.time()
+            plots = []
+            
+            # File upload API for CSV
+            if uploaded_file_ref and GENAI_CLIENT_AVAILABLE:
+                logger.info("[RESPONSE] Using file upload API with plot detection")
+                client = genai.Client()
+                
+                # Use generation config with code execution enabled
+                response = client.models.generate_content(
+                    model=MODEL_NAME,
+                    contents=[uploaded_file_ref, prompt],
+                    config=GENERATION_CONFIG_WITH_CODE_EXECUTION
+                )
+                
+                # Extract plots from response
+                plots = PlotService.extract_plots_from_response(response)
+                
+                # Extract text from response (handle mixed content with images)
+                response_text = self._extract_text_from_response(response)
+                
+            # Regular chat with history
+            else:
+                logger.info("[RESPONSE] Using regular chat API with plot detection")
+                gemini_history = self._convert_to_gemini_format(history[:-1])
+                chat = self.model.start_chat(history=gemini_history if gemini_history else [])
+                message_content = [prompt, image] if image else prompt
+                response = chat.send_message(message_content)
+                
+                # Extract plots from response
+                plots = PlotService.extract_plots_from_response(response)
+                
+                # Extract text from response (handle mixed content with images)
+                response_text = self._extract_text_from_response(response)
+            
+            elapsed = time.time() - start_time
+            logger.info(f"[RESPONSE] Complete in {elapsed:.2f}s - text: {len(response_text)} chars, plots: {len(plots)}")
+            
+            return {
+                'text': response_text,
+                'plots': plots
+            }
+            
+        except Exception as e:
+            logger.error(f"Error getting response with plots: {e}", exc_info=True)
+            raise
+
+    def _extract_text_from_response(self, response) -> str:
+        """
+        Extract text content from Gemini response.
+        Handles responses with mixed content (text + inline_data).
+        
+        Args:
+            response: Gemini API response object
+            
+        Returns:
+            Extracted text content as string
+        """
+        try:
+            # Try direct text access first (works for text-only responses)
+            if hasattr(response, 'text') and not any(
+                hasattr(part, 'inline_data') 
+                for part in response.candidates[0].content.parts
+            ):
+                return response.text
+            
+            # Extract text parts manually for mixed content responses
+            text_parts = []
+            for part in response.candidates[0].content.parts:
+                if hasattr(part, 'text'):
+                    text_parts.append(part.text)
+            
+            return ''.join(text_parts)
+            
+        except Exception as e:
+            logger.error(f"[ERROR] Error extracting text from response: {str(e)}")
+            return ""

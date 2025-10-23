@@ -19,6 +19,13 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
   - Statistical queries (averages, counts, correlations, etc.)
   - Natural language data exploration
   - Supports files up to 2GB (50K rows recommended for performance)
+- 📈 **Interactive Plot Generation** - AI-powered data visualization with code execution
+  - **Gemini Code Execution**: Real Python code execution for authentic plots
+  - **Automatic Plot Detection**: Intelligently identifies visualization requests
+  - **Multiple Plot Types**: Histograms, scatter plots, bar charts, line graphs, pie charts, heatmaps
+  - **CSV Integration**: Generate plots from uploaded CSV data
+  - **Standalone Plots**: Create visualizations from data described in chat
+  - **In-Chat Display**: Plots appear directly in the conversation
 - ⏱️ **Message Timestamps** - Track when messages are sent and replied
 - 📋 **Comprehensive Logging** - Monitor app activity, debug issues, track performance with detailed timing
 - 🔍 **Performance Diagnostics** - Built-in tools to identify and troubleshoot performance bottlenecks
@@ -41,13 +48,16 @@ image-csv-chatbot/
 ├── src/                    # Source code package
 │   ├── models/            # Data models and constants
 │   │   ├── constants.py   # Application constants
-│   │   └── message.py     # Message data structures
+│   │   ├── message.py     # Message data structures
+│   │   └── plot.py        # Plot data structures
 │   │
 │   ├── services/          # Business logic
 │   │   ├── chat_history.py      # Chat state management
 │   │   ├── gemini_service.py    # AI model communication
 │   │   ├── csv_service.py       # CSV processing with token estimation/validation
 │   │   ├── prompts.py           # Centralized prompt templates
+│   │   ├── prompt_analyzer.py   # Plot detection and prompt analysis
+│   │   ├── plot_service.py      # Plot extraction from AI responses
 │   │   └── response_handler.py  # Response generation
 │   │
 │   └── ui/                # UI components
@@ -57,7 +67,6 @@ image-csv-chatbot/
 ├── logs/                   # Application logs (auto-generated)
 │   └── chatbot_*.log      # Daily log files with performance timing
 │
-├── test_performance_diagnosis.py  # Performance testing tool
 ├── ARCHITECTURE.md         # Architecture documentation
 ├── PERFORMANCE_GUIDE.md    # Performance troubleshooting guide
 ├── TOKEN_ESTIMATION.md     # Token estimation documentation
@@ -188,6 +197,27 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 4. **Get AI-powered analysis** with streaming responses
 5. **CSV persists** during your session until you clear or upload new file
 
+#### Plot Generation & Visualization
+1. **Request plots naturally** in your conversation
+   - With CSV: "Create a histogram of the age column"
+   - With CSV: "Plot a scatter chart showing price vs quantity"
+   - Standalone: "Plot a line graph showing sales from January to June: 100, 120, 150, 180, 200, 220"
+   - Standalone: "Create a pie chart for: Apples 30%, Oranges 25%, Bananas 45%"
+2. **AI generates code** using Gemini Code Execution API
+   - Executes real Python code with matplotlib
+   - Creates authentic, high-quality plots
+3. **Plots appear in chat** automatically
+   - Displayed inline with AI's explanation
+   - Saved in chat history for reference
+4. **Supported plot types**:
+   - 📊 Histograms
+   - 📈 Line graphs
+   - 📉 Scatter plots
+   - 📊 Bar charts
+   - 🥧 Pie charts
+   - 🔥 Heatmaps
+   - And more!
+
 #### Performance Monitoring
 - **Built-in diagnostics**: Run `python test_performance_diagnosis.py quick` to test baseline performance
 - **Detailed timing logs**: Check `logs/chatbot_*.log` for performance metrics
@@ -200,7 +230,9 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 - 💬 Ask clear, specific questions
 - 🖼️ Use high-quality images for better analysis
 - 📝 Provide context in your prompts when uploading images
-- 🔄 Start a new conversation with "Clear Chat History" for fresh context
+- � For plots, specify chart type and data columns clearly
+- 🎨 Request specific plot customizations (colors, labels, titles)
+- �🔄 Start a new conversation with "Clear Chat History" for fresh context
 
 ### Key Features
 
@@ -230,6 +262,12 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 - **File Upload API**: CSV data doesn't consume prompt tokens
 - **Performance diagnostics**: Built-in tools for troubleshooting
 
+📊 **Interactive Plot Generation**:
+- **Code execution**: Real Python code execution via Gemini API
+- **Smart detection**: Automatically recognizes visualization requests
+- **Multiple formats**: Histograms, scatter plots, line graphs, pie charts, and more
+- **Flexible input**: Works with uploaded CSV data or standalone data descriptions
+
 🎨 **Clean UI**: Simple, intuitive interface built with Streamlit
 
 ### Stopping the Application
@@ -256,9 +294,9 @@ To add new packages:
 
 - **Streamlit** - Web application framework for interactive UI
 - **Google Gemini API** - Advanced AI models for text and vision analysis
-  - `gemini-2.5-pro` - Main conversational model with vision
   - `gemini-2.5-flash` - Fast response model
-- **Pandas** - Data manipulation and CSV handling (coming soon)
+- **Gemini Code Execution** - Secure Python code execution for plot generation
+- **Pandas** - Data manipulation and CSV handling
 - **Pillow (PIL)** - Image processing and format handling
 - **Python Logging** - Built-in logging with file and console handlers
 - **python-dotenv** - Secure environment variable management

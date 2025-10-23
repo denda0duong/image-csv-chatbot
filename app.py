@@ -13,6 +13,7 @@ from src.services.gemini_service import GeminiChatService
 from src.services.response_handler import ResponseHandler
 from src.services.csv_service import CSVService
 from src.services.prompts import DataAnalystPrompts
+from src.services.prompt_analyzer import PromptAnalyzer
 from src.ui.chat import ChatUI
 from src.ui.sidebar import SidebarUI
 from logger_config import LoggerConfig, get_logger
@@ -122,15 +123,28 @@ class ChatbotApp:
                     uploaded_csv_file = st.session_state.get('uploaded_csv_file')
                     logger.info(f"[REQUEST] Using cached uploaded file: {uploaded_csv_file.name if uploaded_csv_file else 'None'}")
             
-            # Prepare enhanced prompt
+            # Determine if user is requesting a plot/visualization
+            requires_plot = PromptAnalyzer.requires_plot(prompt)
+            
+            # Prepare enhanced prompt based on context
             enhanced_prompt = prompt
-            if uploaded_csv_file:
-                enhanced_prompt = DataAnalystPrompts.get_file_upload_prompt(prompt)
-                logger.info(f"[REQUEST] Enhanced prompt: {len(enhanced_prompt)} chars")
-            elif df is not None:
+            
+            # Check for CSV upload failure first
+            if df is not None and not uploaded_csv_file:
                 logger.error("[REQUEST] CSV present but upload failed")
                 st.error("❌ Upload failed - please reload the CSV file")
                 return
+            
+            # Determine prompt based on whether plot is needed and CSV is present
+            if requires_plot:
+                # User wants a plot (works with or without CSV)
+                enhanced_prompt = DataAnalystPrompts.get_plot_prompt(prompt)
+                logger.info("[REQUEST] Using plot prompt")
+            elif uploaded_csv_file:
+                # CSV analysis without plot
+                enhanced_prompt = DataAnalystPrompts.get_file_upload_prompt(prompt)
+                logger.info("[REQUEST] Using CSV analysis prompt")
+            # else: use original prompt as-is
             
             logger.info(f"[REQUEST] Sending to AI - User prompt: '{prompt[:100]}...'")
             
@@ -161,12 +175,20 @@ class ChatbotApp:
                         st.caption(f"{upload_status}: {df.shape[0]:,} rows × {df.shape[1]} columns")
             
             # Generate and display AI response
-            # Pass uploaded_csv_file if using file upload, otherwise image only
-            self.response_handler.handle_response(
-                enhanced_prompt, 
-                image=uploaded_image,
-                uploaded_file_ref=uploaded_csv_file
-            )
+            if requires_plot:
+                logger.info("[REQUEST] Using plot-aware response handler")
+                self.response_handler.handle_response_with_plots(
+                    enhanced_prompt,
+                    image=uploaded_image,
+                    uploaded_file_ref=uploaded_csv_file
+                )
+            else:
+                logger.info("[REQUEST] Using streaming response handler")
+                self.response_handler.handle_response(
+                    enhanced_prompt,
+                    image=uploaded_image,
+                    uploaded_file_ref=uploaded_csv_file
+                )
             
             # Clear the image from session state after processing
             if uploaded_image and 'uploaded_image' in st.session_state:

@@ -14,7 +14,6 @@ class DataAnalystPrompts:
     DATA_ANALYST_ROLE = """You are an expert data analyst with deep expertise in statistical analysis, data exploration, and insight generation.
 
 YOUR ROLE:
-- Act as a professional data analyst providing clear, actionable insights
 - Analyze the complete dataset thoroughly and accurately
 - Give direct, specific answers backed by the actual data
 - Use exact numbers, column names, and values from the dataset
@@ -48,3 +47,28 @@ The user has uploaded a CSV file (see above) and needs your help analyzing it.
 {DataAnalystPrompts.DATA_ANALYSIS_INSTRUCTIONS}
 
 User's question: {user_question}"""
+    
+    @staticmethod
+    def get_plot_prompt(user_question: str) -> str:
+        """
+        Generate prompt for plot/visualization requests.
+        
+        Can be used with or without CSV file - works for both cases.
+        
+        Args:
+            user_question: The user's original question
+            
+        Returns:
+            Complete prompt with plot generation instructions
+        """
+        return f"""{DataAnalystPrompts.DATA_ANALYST_ROLE}
+
+VISUALIZATION REQUIREMENTS:
+- Write Python code using matplotlib or seaborn
+- Execute the code to generate the actual plot image
+- Provide a brief interpretation of what the plot shows
+
+{DataAnalystPrompts.DATA_ANALYSIS_INSTRUCTIONS}
+
+User's request: {user_question}"""
+
