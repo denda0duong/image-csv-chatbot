@@ -5,6 +5,9 @@
 logs/
 *.log
 
+# Chat sessions (persistent storage)
+chat_sessions/
+
 # Python
 __pycache__/
 *.py[cod]

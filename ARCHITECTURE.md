@@ -16,14 +16,18 @@ image-csv-chatbot/
 │   │
 │   ├── models/                 # Data models and constants
 │   │   ├── constants.py       # Application constants and enums
-│   │   └── message.py         # Message data models
+│   │   ├── message.py         # Message data models (with image/plot support)
+│   │   └── plot.py            # Plot data structures
 │   │
 │   ├── services/              # Business logic and services
-│   │   ├── chat_history.py   # Chat history management
-│   │   ├── gemini_service.py # Gemini API communication
-│   │   ├── csv_service.py    # CSV processing with token management
-│   │   ├── prompts.py        # Centralized prompt templates
-│   │   └── response_handler.py # Response generation handling
+│   │   ├── chat_history.py        # Chat history with persistence
+│   │   ├── gemini_service.py      # Gemini API communication
+│   │   ├── csv_service.py         # CSV processing with token management
+│   │   ├── prompts.py             # Centralized prompt templates
+│   │   ├── prompt_analyzer.py     # Plot detection and analysis
+│   │   ├── plot_service.py        # Plot extraction from responses
+│   │   ├── persistence_service.py # JSON file persistence
+│   │   └── response_handler.py    # Response generation handling
 │   │
 │   └── ui/                    # User interface components
 │       ├── chat.py            # Chat UI components
@@ -32,10 +36,11 @@ image-csv-chatbot/
 ├── logs/                       # Application logs (auto-generated)
 │   └── chatbot_*.log          # Daily log files
 │
+├── chat_sessions/              # Saved chat sessions (auto-generated, git-ignored)
+│   └── *.json                 # Session files with chat history
+│
 ├── README.md                  # Main documentation
-├── ARCHITECTURE.md            # This file
-├── PERFORMANCE_GUIDE.md       # Performance troubleshooting guide
-└── TOKEN_ESTIMATION.md        # Token management documentation
+└── ARCHITECTURE.md            # This file
 ```
 
 ## 🏗️ Architecture Principles
@@ -98,6 +103,7 @@ The project follows clean architecture principles with clear separation of conce
    - No text-based fallback code (uses File Upload API exclusively)
    - Consolidated error handling
    - Removed redundant methods
+   - Industry-standard code execution for data queries
 
 2. **Performance Monitoring**
    - Comprehensive timing logs with markers: `[UPLOAD]`, `[REQUEST]`, `[RESPONSE]`
@@ -111,6 +117,13 @@ The project follows clean architecture principles with clear separation of conce
    - Clear user feedback on token usage
    - Prevention of API errors due to token limits
 
+4. **Data Persistence**
+   - JSON file-based chat history storage
+   - Automatic save after each message
+   - Session management with unique IDs
+   - Auto-cleanup of old sessions (7+ days)
+   - Binary data (images, plots) stored as base64
+
 ## 🔧 Component Details
 
 ### Models (`src/models/`)
@@ -120,9 +133,14 @@ The project follows clean architecture principles with clear separation of conce
 - `AppConfig`: Application-wide constants
 
 **message.py**
-- `ChatMessage`: Chat message data structure
+- `ChatMessage`: Chat message data structure with image and plot support
 - `GeminiMessage`: Gemini API format message
 - Auto-generates timestamps when messages are created
+- Supports binary data (images as bytes, plots as list of bytes)
+
+**plot.py**
+- `PlotData`: Data structure for AI-generated plots
+- Stores MIME type, image data, and description
 
 ### Core Infrastructure
 
@@ -131,19 +149,38 @@ The project follows clean architecture principles with clear separation of conce
 - `setup_logging()`: Configures file and console handlers
 - Daily log files in `logs/` directory
 - Privacy-focused logging (metadata only)
+- Session tracking and persistence logging
+
+**config.py**
+- Gemini API initialization
+- Model configuration with code execution enabled
+- System instructions for data analysis
+- Environment variable management
 
 ### Services (`src/services/`)
 
 **chat_history.py**
-- `ChatHistoryManager`: Manages chat state
+- `ChatHistoryManager`: Manages chat state with persistence
 - Methods for CRUD operations on history
 - Session state abstraction
+- Automatic session restoration on page refresh
+- Integration with `PersistenceService`
+- Loads most recent session on app start
 - Comprehensive logging of all operations
+
+**persistence_service.py**
+- `PersistenceService`: JSON file-based persistence
+- Session save/load/delete operations
+- Base64 encoding for binary data (images, plots)
+- Automatic cleanup of old sessions (7+ days)
+- Session listing and metadata management
 
 **gemini_service.py**
 - `GeminiChatService`: Gemini API wrapper
 - Streaming and non-streaming responses
-- Format conversion
+- Plot extraction support via `get_response_with_plots()`
+- Text extraction from mixed content (text + images)
+- Format conversion between Streamlit and Gemini
 - Detailed logging with error tracking and performance metrics
 - Response timing tracking (first chunk, total chunks)
 
@@ -158,28 +195,49 @@ The project follows clean architecture principles with clear separation of conce
   - `upload_csv_to_gemini()`: Upload with detailed timing
 
 **prompts.py**
-- Centralized prompt templates
-- CSV analysis prompts
-- System instructions
+- `DataAnalystPrompts`: Centralized prompt templates
+- Code execution requirements for data queries
+- Industry-standard approach (verify before answering)
+- Specific methods for different query types:
+  - `get_file_upload_prompt()`: CSV analysis with code execution
+  - `get_plot_prompt()`: Visualization generation
+
+**prompt_analyzer.py**
+- `PromptAnalyzer`: Analyzes user prompts
+- `requires_plot()`: Detects visualization requests
+- Keyword-based detection (plot, chart, graph, etc.)
+
+**plot_service.py**
+- `PlotService`: Extract plots from Gemini responses
+- `extract_plots_from_response()`: Parse inline_data from API response
+- Filters for image MIME types (PNG, JPEG)
+- Returns list of `PlotData` objects
 
 **response_handler.py**
 - `ResponseHandler`: Orchestrates response generation
+- Streaming responses via `handle_response()`
+- Plot-aware responses via `handle_response_with_plots()`
 - Error handling with logging
 - Status updates
 - Request/response lifecycle tracking
+- Stores plots and images in chat history
 
 ### UI (`src/ui/`)
 
 **chat.py**
 - `ChatUI`: Chat interface components
 - Message rendering with optional timestamps
+- Image and plot display in chat history
 - Input handling
 - Conditional timestamp display based on user preference
+- Supports displaying binary image data
 
 **sidebar.py**
 - `SidebarUI`: Sidebar components
-- Settings
-- Information sections
+- CSV and image upload sections
+- Settings (timestamps toggle)
+- Clear history button
+- Remove image functionality
 - User preference management
 
 ## 🚀 Adding New Features
@@ -266,6 +324,35 @@ class UploadedFile:
   - File Upload API integration (CSV data doesn't consume tokens)
   - Comprehensive upload timing logs
 
+- ✅ **Industry-Standard Code Execution for Data Analysis**
+  - Mandatory code execution for max/min/sorting/statistical queries
+  - Uses pandas methods (df.nsmallest, df.nlargest, etc.)
+  - Verification step before presenting answers
+  - Silent code execution (only results shown, no code blocks)
+  - Eliminates guessing and inconsistent answers
+
+- ✅ **Interactive Plot Generation**
+  - Gemini Code Execution API integration
+  - Automatic plot detection via PromptAnalyzer
+  - PlotService for extracting plots from responses
+  - Support for multiple chart types (histograms, scatter, line, bar, pie, heatmap)
+  - Works with CSV data or standalone data descriptions
+  - Plots displayed inline in chat
+
+- ✅ **Persistent Chat History**
+  - JSON file-based storage in `chat_sessions/` directory
+  - Automatic save after each message
+  - Session restoration on page refresh (loads most recent session)
+  - Binary data support (images and plots encoded as base64)
+  - Auto-cleanup of sessions older than 7 days
+  - Unique session IDs with timestamps
+
+- ✅ **Image & Plot Persistence**
+  - User-uploaded images saved with messages
+  - AI-generated plots saved with responses
+  - Images and plots restored from chat history
+  - Full conversation context preserved across refreshes
+
 - ✅ **Performance Diagnostics System**
   - Three-marker logging system: `[UPLOAD]`, `[REQUEST]`, `[RESPONSE]`
   - Detailed timing for all operations
@@ -288,6 +375,7 @@ class UploadedFile:
   - Enterprise-grade logging system
   - Daily log files in `logs/` directory
   - File and console handlers
+  - Session tracking and persistence operations logged
   - Privacy-focused (metadata only)
   - Performance timing included
 

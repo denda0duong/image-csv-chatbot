@@ -26,6 +26,11 @@ A lightweight Streamlit chat application powered by Google Gemini API that can i
   - **CSV Integration**: Generate plots from uploaded CSV data
   - **Standalone Plots**: Create visualizations from data described in chat
   - **In-Chat Display**: Plots appear directly in the conversation
+- 💾 **Persistent Chat History** - Chat sessions survive page refreshes
+  - **JSON File Storage**: Automatic save after each message
+  - **Session Management**: Unique session IDs for each conversation
+  - **Auto-Cleanup**: Old sessions (7+ days) automatically removed
+  - **Image & Plot Persistence**: Uploaded images and generated plots saved with history
 - ⏱️ **Message Timestamps** - Track when messages are sent and replied
 - 📋 **Comprehensive Logging** - Monitor app activity, debug issues, track performance with detailed timing
 - 🔍 **Performance Diagnostics** - Built-in tools to identify and troubleshoot performance bottlenecks
@@ -52,13 +57,14 @@ image-csv-chatbot/
 │   │   └── plot.py        # Plot data structures
 │   │
 │   ├── services/          # Business logic
-│   │   ├── chat_history.py      # Chat state management
-│   │   ├── gemini_service.py    # AI model communication
-│   │   ├── csv_service.py       # CSV processing with token estimation/validation
-│   │   ├── prompts.py           # Centralized prompt templates
-│   │   ├── prompt_analyzer.py   # Plot detection and prompt analysis
-│   │   ├── plot_service.py      # Plot extraction from AI responses
-│   │   └── response_handler.py  # Response generation
+│   │   ├── chat_history.py        # Chat state management with persistence
+│   │   ├── gemini_service.py      # AI model communication
+│   │   ├── csv_service.py         # CSV processing with token estimation/validation
+│   │   ├── prompts.py             # Centralized prompt templates
+│   │   ├── prompt_analyzer.py     # Plot detection and prompt analysis
+│   │   ├── plot_service.py        # Plot extraction from AI responses
+│   │   ├── persistence_service.py # JSON file persistence for chat history
+│   │   └── response_handler.py    # Response generation
 │   │
 │   └── ui/                # UI components
 │       ├── chat.py        # Chat interface
@@ -67,9 +73,10 @@ image-csv-chatbot/
 ├── logs/                   # Application logs (auto-generated)
 │   └── chatbot_*.log      # Daily log files with performance timing
 │
+├── chat_sessions/          # Saved chat sessions (auto-generated, git-ignored)
+│   └── *.json             # Session files with chat history
+│
 ├── ARCHITECTURE.md         # Architecture documentation
-├── PERFORMANCE_GUIDE.md    # Performance troubleshooting guide
-├── TOKEN_ESTIMATION.md     # Token estimation documentation
 └── README.md              # This file
 ```
 
@@ -240,14 +247,18 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 
 📝 **Streaming Responses**: See the AI's response appear in real-time
 
-💾 **Session Persistence**: Chat history is maintained during your session
+💾 **Persistent Chat History**: Chat sessions automatically saved and restored across page refreshes
+- JSON file storage with automatic save after each message
+- Most recent session automatically loaded on refresh
+- Old sessions (7+ days) automatically cleaned up
+- Images and plots preserved in history
 
 🖼️ **Image Vision AI**: Upload and analyze images with Google Gemini's vision capabilities
 - Object detection and identification
 - Scene understanding and description
 - Text extraction (OCR) from images
 - Visual question answering
-- Style and composition analysis
+- Images persist in chat history
 
 ⏱️ **Message Timestamps**: Optional timestamp display showing when each message was sent/replied
 
@@ -255,18 +266,22 @@ python -c "from config import model, text_model; print('✓ Configuration loaded
 - **Performance timing**: Upload, request, and response metrics
 - **Token tracking**: Estimation and validation logging
 - **Streaming metrics**: First chunk time and total chunks
+- **Session tracking**: Chat history save/load operations
 
-📈 **CSV Analysis with Token Management**:
+📈 **CSV Analysis with Code Execution**:
 - **Token estimation**: Preview token usage before upload
 - **Token validation**: Automatic check against 1M token limit
 - **File Upload API**: CSV data doesn't consume prompt tokens
-- **Performance diagnostics**: Built-in tools for troubleshooting
+- **Code-verified answers**: Uses pandas code execution for accurate results
+- **Industry-standard approach**: No guessing, only verified calculations
 
 📊 **Interactive Plot Generation**:
-- **Code execution**: Real Python code execution via Gemini API
+- **Real code execution**: Python code execution via Gemini API
 - **Smart detection**: Automatically recognizes visualization requests
-- **Multiple formats**: Histograms, scatter plots, line graphs, pie charts, and more
+- **Multiple formats**: Histograms, scatter plots, line graphs, pie charts, heatmaps
 - **Flexible input**: Works with uploaded CSV data or standalone data descriptions
+- **Silent execution**: Code runs in background, only results shown
+- **Plots persist**: Generated plots saved in chat history
 
 🎨 **Clean UI**: Simple, intuitive interface built with Streamlit
 
@@ -294,12 +309,14 @@ To add new packages:
 
 - **Streamlit** - Web application framework for interactive UI
 - **Google Gemini API** - Advanced AI models for text and vision analysis
-  - `gemini-2.5-flash` - Fast response model
-- **Gemini Code Execution** - Secure Python code execution for plot generation
+  - `gemini-2.5-flash` - Main conversational model with vision and code execution
+  - `gemini-2.5-flash-lite` - Fast response model for quick interactions
+- **Gemini Code Execution** - Secure Python code execution for data analysis and plot generation
 - **Pandas** - Data manipulation and CSV handling
 - **Pillow (PIL)** - Image processing and format handling
 - **Python Logging** - Built-in logging with file and console handlers
 - **python-dotenv** - Secure environment variable management
+- **JSON** - File-based persistence for chat history storage
 
 ## Architecture
 

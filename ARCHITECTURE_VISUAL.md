@@ -5,27 +5,32 @@
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        app.py                                │
-│                  (Entry Point - 79 lines)                    │
+│                  (Entry Point - Orchestrator)                │
 │                                                               │
 │  ┌────────────────────────────────────────────────────────┐ │
 │  │            ChatbotApp (Orchestrator)                    │ │
 │  │  - Initializes logging system                           │ │
 │  │  - Initializes all components                           │ │
 │  │  - Coordinates application flow                         │ │
+│  │  - Handles CSV upload and image upload                  │ │
+│  │  - Routes to plot-aware or regular response handlers    │ │
 │  │  - Minimal business logic                               │ │
 │  └────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
                             │
-        ┌───────────────────┼───────────────────┬──────────────┐
-        │                   │                   │              │
-        ▼                   ▼                   ▼              ▼
-┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌─────────┐
-│   MODELS     │   │  SERVICES    │   │      UI      │   │ LOGGING │
-│              │   │              │   │              │   │         │
-│ constants.py │   │ chat_history │   │   chat.py    │   │ logger_ │
-│ message.py   │   │ gemini_svc   │   │  sidebar.py  │   │ config  │
-│ +timestamps  │   │ +logging     │   │ +timestamps  │   │         │
-└──────────────┘   └──────────────┘   └──────────────┘   └─────────┘
+        ┌───────────────────┼───────────────────┬──────────────┬──────────┐
+        │                   │                   │              │          │
+        ▼                   ▼                   ▼              ▼          ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌─────────┐  ┌──────────┐
+│   MODELS     │   │  SERVICES    │   │      UI      │   │ LOGGING │  │  STORAGE │
+│              │   │              │   │              │   │         │  │          │
+│ constants.py │   │ chat_history │   │   chat.py    │   │ logger_ │  │  chat_   │
+│ message.py   │   │ gemini_svc   │   │  sidebar.py  │   │ config  │  │ sessions/│
+│ plot.py      │   │ csv_service  │   │ +image/plot  │   │         │  │  (JSON)  │
+│ +image/plots │   │ plot_service │   │  display     │   │         │  │          │
+│              │   │ persistence  │   │              │   │         │  │          │
+└──────────────┘   │ +code exec   │   └──────────────┘   └─────────┘  └──────────┘
+                   └──────────────┘
 ```
 
 ## 📦 Layer Responsibilities
@@ -33,9 +38,10 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                     MODELS LAYER                         │
-│  - Data structures (ChatMessage, GeminiMessage)         │
+│  - Data structures (ChatMessage, GeminiMessage, PlotData)│
 │  - Constants and enums (MessageRole, AppConfig)         │
 │  - Timestamp support for messages                       │
+│  - Image and plot data support (binary bytes)           │
 │  - No dependencies on other layers                      │
 │  - Pure Python, framework-agnostic                      │
 └─────────────────────────────────────────────────────────┘
@@ -45,9 +51,13 @@
 ┌─────────────────────────────────────────────────────────┐
 │                   SERVICES LAYER                         │
 │  - Business logic and data processing                   │
-│  - ChatHistoryManager: State management + logging       │
-│  - GeminiChatService: AI communication + logging        │
-│  - ResponseHandler: Response orchestration + logging    │
+│  - ChatHistoryManager: State + persistence + logging    │
+│  - GeminiChatService: AI communication + plot extract   │
+│  - PersistenceService: JSON file storage (base64)       │
+│  - PlotService: Extract plots from API responses        │
+│  - PromptAnalyzer: Detect plot requests                 │
+│  - ResponseHandler: Route to plot or regular handler    │
+│  - CSVService: Token management + file upload           │
 │  - Comprehensive event tracking                         │
 │  - Independent of UI framework                          │
 └─────────────────────────────────────────────────────────┘
@@ -57,8 +67,9 @@
 ┌─────────────────────────────────────────────────────────┐
 │                      UI LAYER                            │
 │  - Streamlit-specific components                        │
-│  - ChatUI: Chat interface + timestamp display           │
-│  - SidebarUI: Sidebar + settings (timestamp toggle)     │
+│  - ChatUI: Chat interface + timestamp + image/plots     │
+│  - SidebarUI: Sidebar + settings + uploads              │
+│  - Display images and plots from chat history           │
 │  - No business logic                                    │
 │  - Purely presentational                                │
 └─────────────────────────────────────────────────────────┘
@@ -70,11 +81,23 @@
 │  - File handler: All events (INFO+)                     │
 │  - Console handler: Warnings/Errors only                │
 │  - Privacy-focused: Metadata only, no message content   │
+│  - Session persistence operations logged                │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│                 PERSISTENCE SYSTEM                       │
+│  - JSON files in chat_sessions/ directory               │
+│  - Automatic save after each message                    │
+│  - Base64 encoding for binary data (images, plots)      │
+│  - Session restoration on page refresh                  │
+│  - Auto-cleanup of old sessions (7+ days)               │
+│  - Unique session IDs with timestamps                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## 🔄 Data Flow
 
+### Regular Chat Flow
 ```
 User Input
     │
@@ -86,8 +109,8 @@ User Input
     │
     ▼
 ┌─────────────────────┐
-│ ChatHistoryManager  │ Store message (with timestamp)
-│   add_message()     │ [LOGGED]
+│ ChatHistoryManager  │ Store message (with timestamp, image if any)
+│   add_message()     │ [LOGGED] → Auto-save to JSON
 └─────────────────────┘
     │
     ▼
@@ -98,6 +121,107 @@ User Input
     │
     ▼
 ┌─────────────────────┐
+│ GeminiChatService   │ Get streaming response
+│ get_response_stream │ [LOGGED] (timing tracked)
+└─────────────────────┘
+    │
+    ▼
+┌────────────────┐
+│   ChatUI       │ Display streaming response
+│ write_stream() │
+└────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│ ChatHistoryManager  │ Store AI response (with timestamp)
+│   add_message()     │ [LOGGED] → Auto-save to JSON
+└─────────────────────┘
+
+### Plot Generation Flow
+```
+User Input (with plot keywords)
+    │
+    ▼
+┌────────────────────┐
+│ PromptAnalyzer     │ Detect plot request
+│  requires_plot()   │ (keywords: plot, chart, graph, etc.)
+└────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│ ChatHistoryManager  │ Store message (with image/timestamp)
+│   add_message()     │ [LOGGED] → Auto-save to JSON
+└─────────────────────┘
+    │
+    ▼
+┌─────────────────────────┐
+│  ResponseHandler        │ Use plot-aware handler
+│ handle_response_with    │ [LOGGED]
+│     _plots()            │
+└─────────────────────────┘
+    │
+    ▼
+┌─────────────────────────┐
+│ GeminiChatService       │ Get non-streaming response with plots
+│ get_response_with_plots │ [LOGGED] (code execution enabled)
+└─────────────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│   PlotService       │ Extract plots from response
+│ extract_plots()     │ (find inline_data parts)
+└─────────────────────┘
+    │
+    ▼
+┌────────────────┐
+│   ChatUI       │ Display text + plots
+│  st.markdown() │
+│  st.image()    │
+└────────────────┘
+    │
+    ▼
+┌─────────────────────┐
+│ ChatHistoryManager  │ Store AI response + plots (as bytes)
+│ add_message(plots)  │ [LOGGED] → Auto-save to JSON (base64)
+└─────────────────────┘
+
+### Page Refresh Flow
+```
+Page Refresh (F5)
+    │
+    ▼
+st.session_state cleared
+    │
+    ▼
+┌─────────────────────────┐
+│ ChatHistoryManager      │ Initialize
+│   initialize()          │
+└─────────────────────────┘
+    │
+    ▼
+┌─────────────────────────┐
+│ PersistenceService      │ List all sessions
+│  list_sessions()        │
+└─────────────────────────┘
+    │
+    ▼
+┌─────────────────────────┐
+│ PersistenceService      │ Load most recent session
+│  load_session()         │ (base64 → bytes for images/plots)
+└─────────────────────────┘
+    │
+    ▼
+┌─────────────────────────┐
+│ st.session_state        │ Restore messages, session_id
+│  messages = loaded      │
+└─────────────────────────┘
+    │
+    ▼
+┌────────────────┐
+│   ChatUI       │ Render all messages (with images/plots)
+│ render_msgs()  │
+└────────────────┘
+```
 │ GeminiChatService   │ Get AI response
 │ get_response_stream()│ [LOGGED: request, chunks, completion]
 └─────────────────────┘
@@ -123,41 +247,43 @@ User sees response + optional timestamp
 ```
 project-root/
 │
-├── 📄 app.py ─────────────────► Entry point (minimal logic + logging init)
-├── ⚙️ config.py ──────────────► API configuration
+├── 📄 app.py ─────────────────► Entry point (orchestration + logging init)
+├── ⚙️ config.py ──────────────► API configuration (code execution enabled)
 ├── 📊 logger_config.py ───────► Logging system configuration
 │
 ├── 📁 src/
 │   │
 │   ├── 📁 models/
 │   │   ├── constants.py ──────► Enums, constants
-│   │   └── message.py ────────► Data structures
-│   │
-│   ├── 📁 models/
-│   │   ├── constants.py ──────► Constants & enums
-│   │   └── message.py ────────► Message models (with timestamps)
+│   │   ├── message.py ────────► Message models (timestamps, images, plots)
+│   │   └── plot.py ───────────► Plot data structures
 │   │
 │   ├── 📁 services/
-│   │   ├── chat_history.py ───► State management (+ logging)
-│   │   ├── gemini_service.py ─► AI API wrapper (+ logging)
-│   │   └── response_handler.py► Response logic (+ logging)
+│   │   ├── chat_history.py ───────► State + persistence (+ logging)
+│   │   ├── gemini_service.py ─────► AI API + plot extract (+ logging)
+│   │   ├── csv_service.py ────────► CSV upload + token mgmt
+│   │   ├── prompts.py ────────────► Prompt templates (code exec)
+│   │   ├── prompt_analyzer.py ────► Plot detection
+│   │   ├── plot_service.py ───────► Extract plots
+│   │   ├── persistence_service.py ► JSON storage (base64)
+│   │   └── response_handler.py ───► Response logic (plot-aware)
 │   │
 │   └── 📁 ui/
-│       ├── chat.py ───────────► Chat interface (+ timestamps)
-│       └── sidebar.py ────────► Sidebar UI (+ timestamp toggle)
+│       ├── chat.py ───────────► Chat interface (images, plots, timestamps)
+│       └── sidebar.py ────────► Sidebar UI (uploads, settings)
 │
 ├── 📁 logs/
-│   └── chatbot_*.log ─────────► Daily log files
+│   └── chatbot_*.log ─────────► Daily log files (performance + session)
 │
-├── 📚 Documentation
-│   ├── README.md
-│   ├── ARCHITECTURE.md
-│   ├── LOGGING.md
-│   └── TIMESTAMP_FEATURE.md
+├── 📁 chat_sessions/
+│   └── *.json ────────────────► Saved sessions (auto-generated)
 │
-└── 🧪 Utilities
-    ├── test_config.py
-    └── list_models.py
+└── 📚 Documentation
+    ├── README.md
+    ├── ARCHITECTURE.md
+    ├── ARCHITECTURE_VISUAL.md
+    ├── PERFORMANCE_GUIDE.md
+    └── TOKEN_ESTIMATION.md
 ```
 
 ## 🔀 Component Interactions

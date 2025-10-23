@@ -240,5 +240,5 @@ class GeminiChatService:
             return ''.join(text_parts)
             
         except Exception as e:
-            logger.error(f"[ERROR] Error extracting text from response: {str(e)}")
+            logger.warning(f"[WARNING] No text extracted from response: {str(e)}")
             return ""
